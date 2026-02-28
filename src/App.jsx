@@ -7,7 +7,7 @@ import {
   Layers, MapPin as MapPinIcon, LayoutDashboard, Plus, Trash2,
   Activity, ShieldAlert, Users, Calendar, Maximize, Printer, Image as ImageIcon, Palette,
   PanelRightClose, PanelRightOpen, ChevronDown, ChevronUp, Calculator, Microscope,
-  Filter, RefreshCw
+  Filter, RefreshCw, ClipboardCheck
 } from 'lucide-react';
 
 // --- TIỆN ÍCH THỐNG KÊ (NATIVE JS) ---
@@ -38,7 +38,6 @@ const calculateCorrelation = (x, y) => {
   }
   return den1 === 0 || den2 === 0 ? 0 : num / Math.sqrt(den1 * den2);
 };
-// Tiện ích mới: Tính các tứ phân vị cho Boxplot
 const calculateQuartiles = (arr) => {
   if(arr.length === 0) return {min:0, q1:0, median:0, q3:0, max:0};
   const sorted = [...arr].sort((a, b) => a - b);
@@ -52,16 +51,14 @@ const calculateQuartiles = (arr) => {
   return { min, q1, median, q3, max };
 };
 
-// Hàm lấy màu cho ma trận tương quan (Đỏ: nghịch, Xanh: thuận)
 const getCorrelationColor = (val) => {
   if (val === null || isNaN(val)) return '#f8fafc';
   const intensity = Math.min(Math.abs(val), 1);
-  if (val > 0) return `rgba(16, 185, 129, ${intensity * 0.8})`; // Xanh ngọc
-  if (val < 0) return `rgba(225, 29, 72, ${intensity * 0.8})`;  // Đỏ hồng
+  if (val > 0) return `rgba(16, 185, 129, ${intensity * 0.8})`; 
+  if (val < 0) return `rgba(225, 29, 72, ${intensity * 0.8})`;  
   return '#f8fafc';
 };
 
-// --- TIỆN ÍCH XỬ LÝ CHUỖI THỜI GIAN ---
 const parseExcelDate = (excelDate) => {
     if (!excelDate) return null;
     if (typeof excelDate === 'number') return new Date(Math.round((excelDate - 25569) * 86400 * 1000));
@@ -69,8 +66,8 @@ const parseExcelDate = (excelDate) => {
         const parts = String(excelDate).split(/[-/]/);
         if (parts.length === 3) {
             const d1 = new Date(excelDate);
-            if (!isNaN(d1) && String(excelDate).includes('-')) return d1; // YYYY-MM-DD
-            if (parts[2].length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); // DD/MM/YYYY
+            if (!isNaN(d1) && String(excelDate).includes('-')) return d1; 
+            if (parts[2].length === 4) return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`); 
         }
         const d = new Date(excelDate);
         if (!isNaN(d)) return d;
@@ -106,7 +103,6 @@ const formatTimeGroup = (dateObj, groupType) => {
     }
 };
 
-// --- COMPONENT CON CHO BIỂU ĐỒ SCATTER ---
 const MiniScatterChart = ({ dataPoints, trendline, xLabel, yLabel }) => {
   const canvasRef = useRef(null);
   const chartInstance = useRef(null);
@@ -164,11 +160,9 @@ const normalizeString = (str) => {
             .trim();
 };
 
-// Tiện ích mới: Chuẩn hóa tên địa phương thông minh (loại bỏ mọi sai khác về dấu, khoảng trắng, tiền tố)
 const generateLocationKey = (str) => {
   if (!str) return '';
   let s = String(str).toLowerCase().trim();
-  // Danh sách tiền tố hành chính từ đầy đủ đến viết tắt (cả có dấu và không dấu)
   const prefixes = [
     'thành phố ', 'thanh pho ', 'tp. ', 'tp ',
     'tỉnh ', 'tinh ',
@@ -185,7 +179,6 @@ const generateLocationKey = (str) => {
       break; 
     }
   }
-  // Chuyển về không dấu và loại bỏ hoàn toàn khoảng trắng, ký tự đặc biệt để làm ID duy nhất
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
 };
 
@@ -208,7 +201,6 @@ const KNOWN_LOCATIONS = {
   "thanh khe": { lat: 16.0650, lng: 108.1850 }
 };
 
-// --- COMPONENT BIỂU ĐỒ DASHBOARD TỐI ƯU ---
 const DashboardWidget = ({ widget, dataset, onRemove }) => {
   const canvasRef = useRef(null);
   const chartInstance = useRef(null);
@@ -252,7 +244,7 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
 
            let sortedKeys = Object.keys(table);
            if (hasTimeGroup) {
-               sortedKeys.sort(); // Sắp xếp theo trình tự thời gian (A-Z theo mã sortKey)
+               sortedKeys.sort(); 
            } else {
                const xTotals = {};
                sortedKeys.forEach(x => { xTotals[x] = Object.values(table[x]).reduce((a,b)=>a+b,0); });
@@ -459,7 +451,6 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
             scales.x = { grid: { display: false }, stacked: isStackedChart };
         }
 
-        // --- PLUGIN NHÃN DỮ LIỆU TRỰC TIẾP ---
         const dataLabelsPlugin = {
             id: 'customDataLabels',
             afterDatasetsDraw(chart) {
@@ -475,13 +466,12 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
                     if (!meta.hidden) {
                         meta.data.forEach((element, index) => {
                             const val = dataset.data[index];
-                            if (val > 0) { // Chỉ hiện số lớn hơn 0 cho đỡ rối mắt
+                            if (val > 0) { 
                                 let displayVal = val.toLocaleString('vi-VN', { maximumFractionDigits: 1 });
                                 if (widget.type === 'stackedBar100' || (widget.type === 'pareto' && dataset.type === 'line')) displayVal += '%';
                                 
                                 const position = element.tooltipPosition();
                                 ctx.fillStyle = isPieOrDoughnut || isStackedChart ? '#ffffff' : '#475569';
-                                // Chỉnh vị trí Y một chút tùy loại biểu đồ để chữ không đè nét
                                 let yOffset = isStackedChart ? position.y + (element.height / 2) + 4 : position.y - 4;
                                 if (isPieOrDoughnut) yOffset = position.y;
                                 
@@ -623,7 +613,6 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
   );
 }
 
-// --- API GEMINI TÍCH HỢP ---
 const apiKey = ""; 
 
 const callGeminiAPI = async (prompt, systemInstruction) => {
@@ -655,7 +644,6 @@ const callGeminiAPI = async (prompt, systemInstruction) => {
   }
 };
 
-// --- THÀNH PHẦN GIAO DIỆN CHÍNH ---
 export default function App() {
   const [activeTab, setActiveTab] = useState('upload');
   const [dataset, setDataset] = useState({ headers: [], rows: [] });
@@ -670,8 +658,9 @@ export default function App() {
 
   const [schemaExplanation, setSchemaExplanation] = useState('');
   const [anomaliesInsight, setAnomaliesInsight] = useState('');
+  const [aiReport, setAiReport] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
-  // Trạng thái Logo Tùy chỉnh
   const [customLogo, setCustomLogo] = useState(null);
 
   const handleLogoUpload = (e) => {
@@ -683,14 +672,12 @@ export default function App() {
     }
   };
   
-  // Trạng thái Phân tích chuyên sâu (ANOVA, Chi-Square)
   const [advancedTest, setAdvancedTest] = useState('');
   const [testVar1, setTestVar1] = useState('');
   const [testVar2, setTestVar2] = useState('');
   const [testResult, setTestResult] = useState(null);
-  const [multiTestVars, setMultiTestVars] = useState([]); // State mới cho hồi quy đa biến
+  const [multiTestVars, setMultiTestVars] = useState([]); 
 
-  // Trạng thái Dashboard & AI Builder
   const [dashboardWidgets, setDashboardWidgets] = useState([]);
   const [newWidgetConfig, setNewWidgetConfig] = useState({ 
       type: 'bar', xAxes: [], yAxes: [], aggMethod: 'count', title: '', dualAxis: false, timeGroup: 'none', showDataLabels: false 
@@ -699,11 +686,10 @@ export default function App() {
   const [aiChartInput, setAiChartInput] = useState('');
   const [isAiGeneratingChart, setIsAiGeneratingChart] = useState(false);
 
-  // Trạng thái Bản đồ nâng cao AI
   const [mapConfig, setMapConfig] = useState({ 
     locationCol: '', analyzeVar: '', aggMethod: 'count', mapContext: '', mapStyle: 'polygon',
     colorMode: 'auto', 
-    filterCol: '', filterVal: '', // State mới cho bộ lọc bản đồ
+    filterCol: '', filterVal: '', 
     customRanges: [
       {min: 0, max: 100, color: '#fef0d9'}, 
       {min: 101, max: 200, color: '#fc8d59'}, 
@@ -723,10 +709,8 @@ export default function App() {
   const leafletMapRef = useRef(null);
   const markerLayerRef = useRef(null);
 
-  // Trạng thái chặn hiển thị cho đến khi tải xong Giao diện (Tailwind CSS)
   const [isUiLoaded, setIsUiLoaded] = useState(false);
 
-  // Tải thư viện
   useEffect(() => {
     if (!document.getElementById('jstat-cdn')) {
       const script = document.createElement('script');
@@ -844,7 +828,7 @@ export default function App() {
       if (idx >= numClasses) idx = numClasses - 1;
       return colors[idx];
     }
-    return getHeatColor(val, min, max); 
+    return `rgba(225, 29, 72, ${((val - min) / (max - min)) * 0.8 + 0.2})`; 
   };
 
   useEffect(() => {
@@ -966,38 +950,29 @@ export default function App() {
 
     const aggregatedData = {};
     
-    // LÕI XỬ LÝ MỚI: Gom nhóm tuyệt đối không phân biệt hoa/thường và ép kiểu số liệu
     dataset.rows.forEach(row => {
-      // --- BỘ LỌC DỮ LIỆU BẢN ĐỒ ---
       if (mapConfig.filterCol && mapConfig.filterVal) {
          const rowVal = String(row[mapConfig.filterCol] || '').trim();
-         if (rowVal !== mapConfig.filterVal) return; // Bỏ qua nếu không khớp bộ lọc
+         if (rowVal !== mapConfig.filterVal) return; 
       }
 
       const locRaw = row[mapConfig.locationCol];
       if (!locRaw) return;
       const originalLocStr = String(locRaw).trim();
-      
-      // LÕI NHẬN DIỆN THÔNG MINH MỚI: Sử dụng hàm generateLocationKey siêu chặt chẽ
       const locKey = generateLocationKey(originalLocStr);
       if (!locKey) return;
 
       if (!aggregatedData[locKey]) {
          aggregatedData[locKey] = { originalName: originalLocStr, values: [], count: 0 };
       } else {
-         // Chấm điểm để ưu tiên giữ lại tên chuẩn nhất (có dấu, có chữ Phường/Xã) làm tên hiển thị
          const currentName = aggregatedData[locKey].originalName;
          const newName = originalLocStr;
          
          const scoreName = (name) => {
             let score = 0;
-            // Điểm 1: Có tiếng Việt có dấu
             if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(name)) score += 5; 
-            // Điểm 2: Ghi đầy đủ chữ Phường, Xã, Quận...
             if (/^(phường|xã|thị trấn|thị xã|quận|huyện|thành phố|tỉnh)\s/i.test(name)) score += 10; 
-            // Điểm 3: Ghi viết tắt P., X., Q....
             else if (/^(p\.|x\.|tt\.|tx\.|q\.|h\.|tp\.)/i.test(name)) score += 3; 
-            // Điểm 4: Viết hoa chữ cái đầu (đúng chính tả)
             if (/^[A-ZĐ]/.test(name)) score += 2;
             return score;
          };
@@ -1026,7 +1001,6 @@ export default function App() {
         const originalName = aggregatedData[locKey].originalName;
         setMapProgressText(`Đang tải ranh giới địa lý (${i + 1}/${uniqueLocations.length}): ${originalName}...`);
         try {
-          // Tự động thêm giá trị lọc vào ngữ cảnh để tìm kiếm API ranh giới chính xác tuyệt đối
           let autoContext = (mapConfig.filterCol && mapConfig.filterVal) ? `${mapConfig.filterVal}, ` : '';
           const queryContext = mapConfig.mapContext ? `, ${mapConfig.mapContext}, Vietnam` : `, ${autoContext}Vietnam`;
           
@@ -1189,10 +1163,9 @@ export default function App() {
 
   const finalizeDataLoad = (headers, rows) => {
     setDataset({ headers, rows }); setSelectedVariables(headers); generateBasicStats(headers, rows);
-    
-    // --- KHẮC PHỤC LỖI "BÓNG MA DỮ LIỆU": Khởi tạo lại toàn bộ state từ lần tải file trước ---
     setSchemaExplanation(''); 
     setAnomaliesInsight(''); 
+    setAiReport('');
     setMapPoints([]); 
     setMapGeoJsonFeatures([]); 
     setMapAiInsight('');
@@ -1201,10 +1174,8 @@ export default function App() {
     setTestVar2('');
     setTestResult(null);
     setMultiTestVars([]);
-    setDashboardWidgets([]); // Xóa biểu đồ cũ tránh lỗi không tìm thấy cột
+    setDashboardWidgets([]); 
     setChatHistory([{ role: 'ai', text: 'Dữ liệu mới đã được cập nhật thành công. Bạn muốn phân tích điều gì?' }]);
-    // --- KẾT THÚC FIX ---
-
     setCurrentPage(1); setActiveTab('data');
   };
 
@@ -1258,24 +1229,44 @@ An Hải Tây,2023-02-09,DuongTinh`;
     setAnomaliesInsight(response); setIsLoading(false);
   };
 
-  // --- THÊM HÀM RESET TOÀN BỘ HỆ THỐNG ---
+  const generateFullAiReport = async () => {
+    if (dataset.rows.length === 0) return;
+    setIsGeneratingReport(true);
+    const statsSummary = JSON.stringify(dataStats);
+    const prompt = `Bạn là một Chuyên gia Dịch tễ học và Phân tích dữ liệu Y tế cấp cao. 
+    Dưới đây là tóm tắt thống kê toàn diện của bộ dữ liệu giám sát:
+    - Tổng số bản ghi: ${dataset.rows.length}
+    - Các cột dữ liệu: ${dataset.headers.join(', ')}
+    - Thống kê chi tiết: ${statsSummary}
+
+    HÃY THỰC HIỆN PHÂN TÍCH SÂU VÀ VIẾT BÁO CÁO TỔNG THỂ BAO GỒM:
+    1. Tóm lược bối cảnh và quy mô của bộ dữ liệu.
+    2. Phân tích các xu hướng nổi bật (đặc biệt là các biến số định lượng quan trọng).
+    3. Đánh giá cơ cấu và phân bố (dựa trên các biến phân loại).
+    4. Nhận diện các điểm nóng (Hotspots), rủi ro hoặc điểm bất thường cần lưu ý ngay lập tức.
+    5. Đề xuất các chiến lược giám sát hoặc can thiệp y tế cụ thể cho đơn vị CDC.
+
+    Yêu cầu trình bày chuyên nghiệp bằng tiếng Việt, định dạng Markdown rõ ràng, có tiêu đề và các phần phân tách khoa học.`;
+
+    const report = await callGeminiAPI(prompt);
+    setAiReport(report);
+    setIsGeneratingReport(false);
+  };
+
   const handleResetAllData = () => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu, biểu đồ, bản đồ và kết quả phân tích hiện tại để bắt đầu lại từ đầu?")) return;
-    
     setDataset({ headers: [], rows: [] });
     setDataStats({});
     setSelectedVariables([]);
     setSchemaExplanation('');
     setAnomaliesInsight('');
-    
+    setAiReport('');
     setAdvancedTest('');
     setTestVar1('');
     setTestVar2('');
     setTestResult(null);
     setMultiTestVars([]);
-    
     setDashboardWidgets([]);
-    
     setMapConfig({ 
       locationCol: '', analyzeVar: '', aggMethod: 'count', mapContext: '', mapStyle: 'polygon',
       colorMode: 'auto', filterCol: '', filterVal: '',
@@ -1288,9 +1279,7 @@ An Hải Tây,2023-02-09,DuongTinh`;
     setMapPoints([]);
     setMapGeoJsonFeatures([]);
     setMapAiInsight('');
-    
     setChatHistory([{ role: 'ai', text: 'Chào mừng bạn đến với hệ thống phân tích. Dữ liệu đã sẵn sàng, tôi có thể giúp gì cho bạn?' }]);
-    
     setActiveTab('upload');
   };
 
@@ -1393,7 +1382,7 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                         <option value="funnel">Biểu đồ Phễu (Funnel)</option>
                         <option value="table">Bảng Đa Biến (Table)</option>
                     </optgroup>
-                    <optgroup label="Biểu đồ chuyên môn (Mới)">
+                    <optgroup label="Biểu đồ chuyên môn">
                         <option value="stackedBar">Cột chồng (Stacked Bar)</option>
                         <option value="stackedBar100">Cột chồng 100% (100% Stacked)</option>
                         <option value="pareto">Biểu đồ Pareto (80/20)</option>
@@ -1413,7 +1402,6 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                  </div>
               </div>
               
-              {/* CẤU HÌNH NHÓM THỜI GIAN MỚI */}
               <div className="pt-2 border-t border-slate-100">
                  <label className="block text-[13px] font-bold text-slate-500 uppercase mb-2">Chuỗi thời gian (Cho Trục X)</label>
                  <select value={newWidgetConfig.timeGroup || 'none'} onChange={e => setNewWidgetConfig({...newWidgetConfig, timeGroup: e.target.value})} className="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-sky-500 bg-sky-50/50 font-medium text-sky-800">
@@ -1580,7 +1568,6 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
         return;
       }
       
-      // Hàm tiện ích parse số an toàn (tránh chuỗi khoảng trắng '' hoặc '   ' bị parse thành 0)
       const parseStrictNumber = (val) => {
           if (val === undefined || val === null || String(val).trim() === '') return NaN;
           return Number(val);
@@ -1621,21 +1608,16 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
          let df = (rows.length - 1) * (cols.length - 1);
          let pValue = df > 0 ? (1 - window.jStat.chisquare.cdf(chiSquare, df)) : 1;
          
-         // BỔ SUNG NHÓM 1: Tính OR và RR nếu là bảng 2x2
          let or_res = null, rr_res = null;
          if (rows.length === 2 && cols.length === 2) {
             let a = table[rows[0]][cols[0]] || 0; let b = table[rows[0]][cols[1]] || 0;
             let c = table[rows[1]][cols[0]] || 0; let d = table[rows[1]][cols[1]] || 0;
-            
-            // Hiệu chỉnh Haldane-Anscombe nếu có ô bằng 0
             if (a===0 || b===0 || c===0 || d===0) { a+=0.5; b+=0.5; c+=0.5; d+=0.5; }
-            
             let or_val = (a * d) / (b * c);
             let se_ln_or = Math.sqrt(1/a + 1/b + 1/c + 1/d);
             let or_ci_low = Math.exp(Math.log(or_val) - 1.96*se_ln_or);
             let or_ci_high = Math.exp(Math.log(or_val) + 1.96*se_ln_or);
             or_res = { val: or_val, low: or_ci_low, high: or_ci_high };
-
             let risk_exp = a / (a+b);
             let risk_unexp = c / (c+d);
             let rr_val = risk_unexp !== 0 ? risk_exp / risk_unexp : Infinity;
@@ -1644,11 +1626,9 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
             let rr_ci_high = Math.exp(Math.log(rr_val) + 1.96*se_ln_rr);
             rr_res = { val: rr_val, low: rr_ci_low, high: rr_ci_high };
          }
-         
          setTestResult({ type: 'chisquare', chiSquare, df, pValue, table, rowTotals, colTotals, total, rows, cols, expectedWarning, expectedMatrix, or_res, rr_res });
 
       } else if (advancedTest === 'ttest_ind') {
-         // BỔ SUNG NHÓM 2: T-test Độc lập
          let groups = {};
          dataset.rows.forEach(r => {
              let num = parseStrictNumber(r[testVar1]);
@@ -1659,48 +1639,38 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                 groups[cat].push(num);
              }
          });
-         
          let cats = Object.keys(groups);
          if (cats.length !== 2) {
-             alert(`T-test độc lập yêu cầu biến phân nhóm phải có CHÍNH XÁC 2 nhóm. Biến "${testVar2}" hiện có ${cats.length} nhóm.`);
+             alert(`T-test độc lập yêu cầu biến phân nhóm phải có CHÍNH XÁC 2 nhóm.`);
              return;
          }
-         
          let arr1 = groups[cats[0]]; let arr2 = groups[cats[1]];
          let n1 = arr1.length; let n2 = arr2.length;
-         if(n1 < 2 || n2 < 2) return alert("Mỗi nhóm phải có ít nhất 2 quan sát để tính phương sai.");
-         
+         if(n1 < 2 || n2 < 2) return alert("Mỗi nhóm phải có ít nhất 2 quan sát.");
          let mean1 = calculateMean(arr1); let mean2 = calculateMean(arr2);
          let ss1 = arr1.reduce((acc, val) => acc + Math.pow(val - mean1, 2), 0);
          let ss2 = arr2.reduce((acc, val) => acc + Math.pow(val - mean2, 2), 0);
-         
-         let sp2 = (ss1 + ss2) / (n1 + n2 - 2); // Phương sai gộp (Pooled variance)
+         let sp2 = (ss1 + ss2) / (n1 + n2 - 2); 
          let denom = Math.sqrt(sp2 * (1/n1 + 1/n2));
          let tStat = denom === 0 ? 0 : (mean1 - mean2) / denom;
          let df = n1 + n2 - 2;
          let pValue = 2 * (1 - window.jStat.studentt.cdf(Math.abs(tStat), df));
-         
          setTestResult({ type: 'ttest_ind', tStat, df, pValue, mean1, mean2, n1, n2, std1: Math.sqrt(ss1/(n1-1)), std2: Math.sqrt(ss2/(n2-1)), group1: cats[0], group2: cats[1] });
 
       } else if (advancedTest === 'ttest_paired') {
-         // BỔ SUNG NHÓM 2: T-test Bắt cặp
          let diffs = [];
          dataset.rows.forEach(r => {
              let val1 = parseStrictNumber(r[testVar1]); let val2 = parseStrictNumber(r[testVar2]);
              if (!isNaN(val1) && !isNaN(val2)) diffs.push(val1 - val2);
          });
-         
          let n = diffs.length;
-         if (n < 2) return alert("Cần ít nhất 2 cặp dữ liệu hợp lệ (không chứa giá trị rỗng).");
-         
+         if (n < 2) return alert("Cần ít nhất 2 cặp dữ liệu hợp lệ.");
          let meanDiff = calculateMean(diffs);
          let ssDiff = diffs.reduce((a, b) => a + Math.pow(b - meanDiff, 2), 0);
-         let stdDiff = Math.sqrt(ssDiff / (n - 1)); // Sample standard deviation
-         
+         let stdDiff = Math.sqrt(ssDiff / (n - 1)); 
          let tStat = stdDiff === 0 ? (meanDiff === 0 ? 0 : Infinity) : meanDiff / (stdDiff / Math.sqrt(n));
          let df = n - 1;
          let pValue = !isFinite(tStat) ? 0 : 2 * (1 - window.jStat.studentt.cdf(Math.abs(tStat), df));
-         
          setTestResult({ type: 'ttest_paired', tStat, df, pValue, meanDiff, stdDiff, n });
 
       } else if (advancedTest === 'anova') {
@@ -1716,16 +1686,10 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                 nTotal++;
              }
          });
-
          let k = Object.keys(groups).length;
-         if (k < 2) {
-             alert("Biến phân nhóm phải có ít nhất 2 nhóm hợp lệ để phân tích ANOVA.");
-             return;
-         }
-
+         if (k < 2) { alert("Cần ít nhất 2 nhóm hợp lệ."); return; }
          let globalMean = globalTotal / nTotal;
          let ssb = 0; let ssw = 0; let groupStats = [];
-
          Object.keys(groups).forEach(cat => {
              let arr = groups[cat]; let n = arr.length;
              let mean = arr.reduce((a,b)=>a+b,0) / n;
@@ -1733,17 +1697,13 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
              arr.forEach(val => { ssw += Math.pow(val - mean, 2); });
              groupStats.push({ name: cat, count: n, mean: mean, std: Math.sqrt(calculateVariance(arr, mean)) });
          });
-
          let dfb = k - 1; let dfw = nTotal - k;
          let msb = ssb / dfb; let msw = dfw > 0 ? ssw / dfw : 0;
          let fStat = msw > 0 ? msb / msw : 0;
          let pValue = (dfb > 0 && dfw > 0) ? (1 - window.jStat.centralF.cdf(fStat, dfb, dfw)) : 1;
-
          setTestResult({ type: 'anova', ssb, ssw, msb, msw, fStat, dfb, dfw, pValue, groupStats, globalMean, nTotal });
       } else if (advancedTest === 'correlation') {
-         // TÍNH TOÁN MA TRẬN TƯƠNG QUAN
-         if (numericVars.length < 2) return alert("Cần ít nhất 2 biến định lượng được chọn ở phần 'Tùy chọn biến phân tích' phía trên.");
-         
+         if (numericVars.length < 2) return alert("Cần ít nhất 2 biến định lượng.");
          let matrix = [];
          for(let i=0; i<numericVars.length; i++) {
              let row = [];
@@ -1762,55 +1722,37 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
          setTestResult({ type: 'correlation', variables: numericVars, matrix });
 
       } else if (advancedTest === 'regression_scatter') {
-         // HỒI QUY TUYẾN TÍNH & SCATTER
          let xVals = [], yVals = [], dataPoints = [];
          dataset.rows.forEach(r => {
-             let x = Number(r[testVar2]); // Biến độc lập (Trục X)
-             let y = Number(r[testVar1]); // Biến phụ thuộc (Trục Y)
+             let x = Number(r[testVar2]); 
+             let y = Number(r[testVar1]); 
              if (!isNaN(x) && !isNaN(y)) {
                  xVals.push(x); yVals.push(y);
                  dataPoints.push({ x, y });
              }
          });
-
          let n = xVals.length;
-         if (n < 3) return alert("Cần ít nhất 3 cặp dữ liệu hợp lệ để tính toán hồi quy.");
-
+         if (n < 3) return alert("Cần ít nhất 3 cặp dữ liệu hợp lệ.");
          let meanX = calculateMean(xVals); let meanY = calculateMean(yVals);
          let ssXY = 0; let ssXX = 0; let ssYY = 0;
          for (let i = 0; i < n; i++) {
              let dx = xVals[i] - meanX; let dy = yVals[i] - meanY;
              ssXY += dx * dy; ssXX += dx * dx; ssYY += dy * dy;
          }
-
          let slope = ssXX !== 0 ? ssXY / ssXX : 0;
          let intercept = meanY - slope * meanX;
          let rSquared = (ssXX !== 0 && ssYY !== 0) ? Math.pow(ssXY, 2) / (ssXX * ssYY) : 0;
-         
-         // Tính P-value cho slope (H0: slope = 0)
          let residualSumOfSquares = ssYY - slope * ssXY;
          let standardErrorOfEstimate = Math.sqrt(residualSumOfSquares / (n - 2));
          let standardErrorOfSlope = standardErrorOfEstimate / Math.sqrt(ssXX);
          let tStat = standardErrorOfSlope !== 0 ? slope / standardErrorOfSlope : 0;
          let df = n - 2;
          let pValue = df > 0 ? 2 * (1 - window.jStat.studentt.cdf(Math.abs(tStat), df)) : 1;
-
-         // Tạo đường trendline cho biểu đồ
          let minX = Math.min(...xVals); let maxX = Math.max(...xVals);
-         let trendline = [
-             { x: minX, y: slope * minX + intercept },
-             { x: maxX, y: slope * maxX + intercept }
-         ];
-
-         setTestResult({ 
-             type: 'regression_scatter', 
-             slope, intercept, rSquared, pValue, tStat, df, n, 
-             dataPoints, trendline, 
-             xVar: testVar2, yVar: testVar1 
-         });
+         let trendline = [{ x: minX, y: slope * minX + intercept }, { x: maxX, y: slope * maxX + intercept }];
+         setTestResult({ type: 'regression_scatter', slope, intercept, rSquared, pValue, tStat, df, n, dataPoints, trendline, xVar: testVar2, yVar: testVar1 });
 
       } else if (advancedTest === 'boxplot') {
-         // TÍNH TOÁN BOXPLOT
          let groups = {}; let globalMin = Infinity; let globalMax = -Infinity;
          dataset.rows.forEach(r => {
              let num = Number(r[testVar1]);
@@ -1823,41 +1765,29 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                 if (num > globalMax) globalMax = num;
              }
          });
-
          let boxData = [];
          Object.keys(groups).forEach(cat => {
              let arr = groups[cat];
              let stats = calculateQuartiles(arr);
              boxData.push({ name: cat, count: arr.length, ...stats });
          });
-         
-         // Sắp xếp theo Median giảm dần
          boxData.sort((a, b) => b.median - a.median);
-
          setTestResult({ type: 'boxplot', boxData, globalMin, globalMax, yVar: testVar1, xVar: testVar2 });
          
       } else if (advancedTest === 'logistic') {
-         // HỒI QUY LOGISTIC ĐƠN/ĐA BIẾN (Newton-Raphson IRLS)
          let yUnique = new Set();
          dataset.rows.forEach(r => {
              let yRaw = r[testVar1];
              if (yRaw !== undefined && yRaw !== null && yRaw !== '') yUnique.add(String(yRaw).trim());
          });
-         
          let yClasses = Array.from(yUnique).sort(); 
-         if (yClasses.length !== 2) {
-             return alert(`Biến phụ thuộc Y phải là phân loại nhị phân (có đúng 2 giá trị phân biệt). Biến "${testVar1}" hiện có ${yClasses.length} giá trị.`);
-         }
-         
+         if (yClasses.length !== 2) { return alert(`Biến phụ thuộc Y phải là phân loại nhị phân.`); }
          let baselineClass = yClasses[0]; let eventClass = yClasses[1];
          let X = []; let Y = [];
-         
          dataset.rows.forEach(r => {
              let yRaw = r[testVar1];
              if (yRaw === undefined || yRaw === null || yRaw === '') return;
-             
-             let rowX = [1]; // Intercept
-             let isValid = true;
+             let rowX = [1]; let isValid = true;
              for(let v of multiTestVars) {
                  let num = parseStrictNumber(r[v]);
                  if (isNaN(num)) { isValid = false; break; }
@@ -1868,83 +1798,56 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                  X.push(rowX);
              }
          });
-
          let n = Y.length; let k = multiTestVars.length;
-         if (n < k + 2) return alert("Không đủ dữ liệu hợp lệ để chạy mô hình Hồi quy Logistic (N quá nhỏ).");
-
+         if (n < k + 2) return alert("Không đủ dữ liệu hợp lệ.");
          let beta = Array(k+1).fill(0).map(()=>[0]);
          let XTWX_inv; let converged = false; let ll_model = 0;
-
          for (let iter = 0; iter < 15; iter++) {
              let XTWX = Array(k+1).fill(0).map(()=>Array(k+1).fill(0));
              let XTWz = Array(k+1).fill(0).map(()=>[0]);
              ll_model = 0;
-
              for(let i=0; i<n; i++) {
                  let z = 0;
                  for(let j=0; j<=k; j++) z += X[i][j] * beta[j][0];
-                 
                  let pi = 1 / (1 + Math.exp(-z));
                  if (pi < 1e-15) pi = 1e-15; if (pi > 1 - 1e-15) pi = 1 - 1e-15;
-                 
                  ll_model += Y[i] * Math.log(pi) + (1-Y[i]) * Math.log(1-pi);
-
                  let wi = pi * (1 - pi);
                  if (wi < 1e-10) wi = 1e-10; 
-                 
                  let working_z = z + (Y[i] - pi) / wi;
-                 
                  for(let r=0; r<=k; r++) {
                      XTWz[r][0] += wi * X[i][r] * working_z;
                      for(let c=0; c<=k; c++) XTWX[r][c] += wi * X[i][r] * X[i][c];
                  }
              }
-             
              try { XTWX_inv = window.jStat.inv(XTWX); } 
-             catch(e) { return alert("Lỗi toán học: Ma trận dị thường. Các biến độc lập có thể phụ thuộc tuyến tính (đa cộng tuyến) hoặc dữ liệu quá thưa."); }
-             
+             catch(e) { return alert("Lỗi toán học: Ma trận dị thường."); }
              let new_beta = window.jStat.multiply(XTWX_inv, XTWz);
              let diff = 0;
              for(let i=0; i<=k; i++) diff += Math.abs(new_beta[i][0] - beta[i][0]);
              beta = new_beta;
-             
              if (diff < 1e-6) { converged = true; break; }
          }
-
          let p_null = Y.reduce((a,b)=>a+b,0) / n;
          let ll_null = 0;
          Y.forEach(y => { ll_null += y * Math.log(p_null) + (1-y) * Math.log(1-p_null); });
          let pseudoR2 = 1 - (ll_model / ll_null);
-
          let modelResults = [];
          for(let i=0; i<=k; i++) {
-             let coef = beta[i][0];
-             let se = Math.sqrt(XTWX_inv[i][i]);
+             let coef = beta[i][0]; let se = Math.sqrt(XTWX_inv[i][i]);
              let zStat = se !== 0 ? coef / se : 0;
              let pValue = 2 * (1 - window.jStat.normal.cdf(Math.abs(zStat), 0, 1));
-             
-             // Xử lý tràn số (Infinity) nếu hệ số quá lớn do không hội tụ
              let or = coef > 50 ? Infinity : Math.exp(coef);
              let ci_low = coef > 50 ? Infinity : Math.exp(coef - 1.96 * se);
              let ci_high = coef > 50 ? Infinity : Math.exp(coef + 1.96 * se);
-             
-             modelResults.push({
-                 name: i === 0 ? 'Hằng số (Intercept)' : multiTestVars[i-1],
-                 coef, se, zStat, pValue, or, ci_low, ci_high
-             });
+             modelResults.push({ name: i === 0 ? 'Intercept' : multiTestVars[i-1], coef, se, zStat, pValue, or, ci_low, ci_high });
          }
-
-         setTestResult({ 
-             type: 'logistic', modelResults, n, pseudoR2, 
-             yVar: testVar1, eventClass, baselineClass, converged 
-         });
+         setTestResult({ type: 'logistic', modelResults, n, pseudoR2, yVar: testVar1, eventClass, baselineClass, converged });
       }
     };
 
     const renderTestResult = () => {
       if (!testResult) return null;
-      
-      // Hàm tiện ích render số Infinity tránh lỗi hiển thị NaN hoặc lỗi React DOM
       const safeRenderVal = (val, fractionDigits = 3) => {
          if (!isFinite(val)) return '∞';
          return val.toFixed(fractionDigits);
@@ -1953,19 +1856,18 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
       if (testResult.type === 'chisquare') {
          const { chiSquare, df, pValue, table, rowTotals, colTotals, total, rows, cols, expectedWarning, or_res, rr_res } = testResult;
          const isSig = pValue < 0.05;
-         
          return (
             <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả Bảng chéo {rows.length}x{cols.length} & Kiểm định Chi-Square ($X^2$)</h4>
+               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả Bảng chéo & Kiểm định $X^2$</h4>
                <div className="flex flex-col xl:flex-row gap-6 mb-5">
                   <div className="flex-1 overflow-hidden">
-                     <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto custom-scrollbar shadow-sm">
+                     <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
                         <table className="w-full text-sm text-left">
                            <thead className="bg-slate-50 border-b border-slate-200">
                               <tr>
                                  <th className="p-3 font-semibold text-slate-700 border-r border-slate-200 whitespace-nowrap">{testVar1} \ {testVar2}</th>
                                  {cols.map(c => <th key={c} className="p-3 font-semibold text-slate-700 text-center whitespace-nowrap">{c}</th>)}
-                                 <th className="p-3 font-bold text-slate-800 text-center bg-slate-100 whitespace-nowrap">Tổng Hàng</th>
+                                 <th className="p-3 font-bold text-slate-800 text-center bg-slate-100 whitespace-nowrap">Tổng</th>
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-slate-100">
@@ -1979,24 +1881,22 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                            </tbody>
                            <tfoot className="bg-slate-100 border-t border-slate-200 font-bold text-slate-800">
                               <tr>
-                                 <td className="p-3 border-r border-slate-200 whitespace-nowrap">Tổng Cột</td>
+                                 <td className="p-3 border-r border-slate-200 whitespace-nowrap">Tổng</td>
                                  {cols.map(c => <td key={c} className="p-3 text-center font-mono">{colTotals[c]}</td>)}
                                  <td className="p-3 text-center font-mono text-indigo-700">{total}</td>
                               </tr>
                            </tfoot>
                         </table>
                      </div>
-                     
-                     {/* HIỂN THỊ OR/RR CHO BẢNG 2X2 */}
                      {or_res && rr_res && (
                         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                            <div className="bg-white p-4 border border-indigo-200 rounded-lg shadow-sm">
-                              <div className="text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-1">Tỷ suất chênh (Odds Ratio - OR)</div>
+                              <div className="text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-1">Odds Ratio (OR)</div>
                               <div className="text-2xl font-black text-indigo-700">{safeRenderVal(or_res.val)}</div>
                               <div className="text-sm text-slate-500 mt-1">95% CI: [{safeRenderVal(or_res.low)} - {safeRenderVal(or_res.high)}]</div>
                            </div>
                            <div className="bg-white p-4 border border-indigo-200 rounded-lg shadow-sm">
-                              <div className="text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-1">Nguy cơ tương đối (Relative Risk - RR)</div>
+                              <div className="text-[12px] font-bold text-slate-500 uppercase tracking-wide mb-1">Relative Risk (RR)</div>
                               <div className="text-2xl font-black text-indigo-700">{safeRenderVal(rr_res.val)}</div>
                               <div className="text-sm text-slate-500 mt-1">95% CI: [{safeRenderVal(rr_res.low)} - {safeRenderVal(rr_res.high)}]</div>
                            </div>
@@ -2009,208 +1909,57 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                         <div className="text-xl font-mono font-bold text-indigo-600">{chiSquare.toFixed(3)}</div>
                      </div>
                      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bậc tự do (df)</div>
-                        <div className="text-xl font-mono font-bold text-slate-700">{df}</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
                         <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">P-value</div>
                         <div className={`text-xl font-mono font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}</div>
                      </div>
                   </div>
                </div>
-               
-               <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có mối liên hệ mang ý nghĩa thống kê giữa "${testVar1}" và "${testVar2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có mối liên hệ giữa "${testVar1}" và "${testVar2}" (p >= 0.05).`}
-               </div>
-               
-               {expectedWarning && (
-                  <div className="mt-3 text-[13px] font-medium text-amber-700 flex items-start gap-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                     <AlertTriangle size={18} className="shrink-0 mt-0.5"/> 
-                     <span>Cảnh báo: Có &gt;20% số ô có tần số lý thuyết (Expected count) &lt; 5. Cần thận trọng khi đọc kết quả Chi-square (Nên gom nhóm lại hoặc dùng kiểm định chính xác Fisher nếu là bảng 2x2).</span>
-                  </div>
-               )}
+               {expectedWarning && <div className="mt-3 text-[13px] font-medium text-amber-700 flex items-start gap-2 bg-amber-50 p-3 rounded-lg border border-amber-200"><AlertTriangle size={18} className="shrink-0 mt-0.5"/> <span>Cảnh báo: Tần số lý thuyết thấp.</span></div>}
             </div>
          );
       } else if (testResult.type === 'ttest_ind') {
          const { tStat, df, pValue, mean1, mean2, n1, n2, std1, std2, group1, group2 } = testResult;
          const isSig = pValue < 0.05;
-         
          return (
             <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả T-test Độc lập (Independent Samples T-Test)</h4>
-               
+               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả T-test Độc lập</h4>
                <div className="flex flex-col xl:flex-row gap-6 mb-5">
                   <div className="flex-1 overflow-hidden">
                      <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
                         <table className="w-full text-sm text-left">
                            <thead className="bg-slate-50 border-b border-slate-200">
-                              <tr>
-                                 <th className="p-3 font-semibold text-slate-700">Nhóm ({testVar2})</th>
-                                 <th className="p-3 font-semibold text-slate-700 text-right">N</th>
-                                 <th className="p-3 font-semibold text-slate-700 text-right">Trung bình (Mean)</th>
-                                 <th className="p-3 font-semibold text-slate-700 text-right">Độ lệch chuẩn (SD)</th>
-                              </tr>
+                              <tr><th className="p-3 font-semibold text-slate-700">Nhóm</th><th className="p-3 font-semibold text-slate-700 text-right">N</th><th className="p-3 font-semibold text-slate-700 text-right">Mean</th><th className="p-3 font-semibold text-slate-700 text-right">SD</th></tr>
                            </thead>
                            <tbody className="divide-y divide-slate-100 font-mono">
-                              <tr className="hover:bg-slate-50/50">
-                                 <td className="p-3 font-medium text-slate-700 font-sans">{group1}</td>
-                                 <td className="p-3 text-right text-slate-600">{n1}</td>
-                                 <td className="p-3 text-right text-indigo-600 font-bold">{mean1.toFixed(3)}</td>
-                                 <td className="p-3 text-right text-slate-500">{std1.toFixed(3)}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50/50">
-                                 <td className="p-3 font-medium text-slate-700 font-sans">{group2}</td>
-                                 <td className="p-3 text-right text-slate-600">{n2}</td>
-                                 <td className="p-3 text-right text-indigo-600 font-bold">{mean2.toFixed(3)}</td>
-                                 <td className="p-3 text-right text-slate-500">{std2.toFixed(3)}</td>
-                              </tr>
+                              <tr><td className="p-3 font-sans">{group1}</td><td className="p-3 text-right">{n1}</td><td className="p-3 text-right font-bold text-indigo-600">{mean1.toFixed(3)}</td><td className="p-3 text-right">{std1.toFixed(3)}</td></tr>
+                              <tr><td className="p-3 font-sans">{group2}</td><td className="p-3 text-right">{n2}</td><td className="p-3 text-right font-bold text-indigo-600">{mean2.toFixed(3)}</td><td className="p-3 text-right">{std2.toFixed(3)}</td></tr>
                            </tbody>
                         </table>
                      </div>
                   </div>
                   <div className="w-full xl:w-72 shrink-0 flex flex-col gap-3">
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">T-Statistic</div>
-                        <div className="text-xl font-mono font-bold text-indigo-600">{tStat.toFixed(3)}</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bậc tự do (df)</div>
-                        <div className="text-xl font-mono font-bold text-slate-700">{df}</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">P-value</div>
-                        <div className={`text-xl font-mono font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}</div>
-                     </div>
+                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center"><div className="text-xs text-slate-500 uppercase">T-Statistic</div><div className="text-xl font-bold text-indigo-600">{tStat.toFixed(3)}</div></div>
+                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center"><div className="text-xs text-slate-500 uppercase">P-value</div><div className={`text-xl font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue.toFixed(4)}</div></div>
                   </div>
-               </div>
-
-               <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có sự khác biệt mang ý nghĩa thống kê về trung bình của biến "${testVar1}" giữa 2 nhóm "${group1}" và "${group2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt về trung bình của biến "${testVar1}" giữa 2 nhóm "${group1}" và "${group2}" (p >= 0.05).`}
-               </div>
-            </div>
-         );
-      } else if (testResult.type === 'ttest_paired') {
-         const { tStat, df, pValue, meanDiff, stdDiff, n } = testResult;
-         const isSig = pValue < 0.05;
-         
-         return (
-            <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả T-test Bắt cặp (Paired Samples T-Test)</h4>
-               
-               <div className="flex flex-col xl:flex-row gap-6 mb-5">
-                  <div className="flex-1 overflow-hidden">
-                     <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
-                        <table className="w-full text-sm text-left">
-                           <thead className="bg-slate-50 border-b border-slate-200">
-                              <tr>
-                                 <th className="p-3 font-semibold text-slate-700">Cặp biến số</th>
-                                 <th className="p-3 font-semibold text-slate-700 text-right">Số lượng cặp (N)</th>
-                                 <th className="p-3 font-semibold text-slate-700 text-right">Trung bình hiệu số (Mean Diff)</th>
-                                 <th className="p-3 font-semibold text-slate-700 text-right">Độ lệch chuẩn (SD)</th>
-                              </tr>
-                           </thead>
-                           <tbody className="divide-y divide-slate-100 font-mono">
-                              <tr className="hover:bg-slate-50/50">
-                                 <td className="p-3 font-medium text-slate-700 font-sans">{testVar1} - {testVar2}</td>
-                                 <td className="p-3 text-right text-slate-600">{n}</td>
-                                 <td className="p-3 text-right text-indigo-600 font-bold">{meanDiff.toFixed(3)}</td>
-                                 <td className="p-3 text-right text-slate-500">{stdDiff.toFixed(3)}</td>
-                              </tr>
-                           </tbody>
-                        </table>
-                     </div>
-                  </div>
-                  <div className="w-full xl:w-72 shrink-0 flex flex-col gap-3">
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">T-Statistic</div>
-                        <div className="text-xl font-mono font-bold text-indigo-600">{tStat.toFixed(3)}</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Bậc tự do (df)</div>
-                        <div className="text-xl font-mono font-bold text-slate-700">{df}</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">P-value</div>
-                        <div className={`text-xl font-mono font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}</div>
-                     </div>
-                  </div>
-               </div>
-
-               <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có sự khác biệt mang ý nghĩa thống kê giữa "${testVar1}" và "${testVar2}" trên cùng đối tượng quan sát (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt giữa "${testVar1}" và "${testVar2}" (p >= 0.05).`}
                </div>
             </div>
          );
       } else if (testResult.type === 'anova') {
          const { ssb, ssw, msb, msw, fStat, dfb, dfw, pValue, groupStats } = testResult;
          const isSig = pValue < 0.05;
-
          return (
             <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả Phân tích Phương sai One-way ANOVA</h4>
-               
+               <h4 className="font-bold text-indigo-900 text-lg mb-3">Kết quả One-way ANOVA</h4>
                <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm mb-5">
-                  <table className="w-full text-sm text-left">
+                  <table className="w-full text-sm text-left font-mono">
                      <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                           <th className="p-3 font-semibold text-slate-700">Nguồn biến thiên</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">Tổng bình phương (SS)</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">Bậc tự do (df)</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">Trung bình BP (MS)</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">F-statistic</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">P-value</th>
-                        </tr>
+                        <tr><th className="p-3 font-semibold text-slate-700 font-sans">Nguồn</th><th className="p-3 text-right font-semibold text-slate-700 font-sans">SS</th><th className="p-3 text-right font-semibold text-slate-700 font-sans">df</th><th className="p-3 text-right font-semibold text-slate-700 font-sans">MS</th><th className="p-3 text-right font-semibold text-slate-700 font-sans">F</th><th className="p-3 text-right font-semibold text-slate-700 font-sans">P</th></tr>
                      </thead>
-                     <tbody className="divide-y divide-slate-100 font-mono">
-                        <tr className="hover:bg-slate-50/50">
-                           <td className="p-3 font-medium text-slate-700 font-sans">Giữa các nhóm (Between)</td>
-                           <td className="p-3 text-right text-slate-600">{ssb.toFixed(2)}</td>
-                           <td className="p-3 text-right text-slate-600">{dfb}</td>
-                           <td className="p-3 text-right text-slate-600">{msb.toFixed(2)}</td>
-                           <td className="p-3 text-right text-indigo-600 font-bold">{fStat.toFixed(3)}</td>
-                           <td className={`p-3 text-right font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}</td>
-                        </tr>
-                        <tr className="hover:bg-slate-50/50">
-                           <td className="p-3 font-medium text-slate-700 font-sans">Nội bộ nhóm (Within)</td>
-                           <td className="p-3 text-right text-slate-600">{ssw.toFixed(2)}</td>
-                           <td className="p-3 text-right text-slate-600">{dfw}</td>
-                           <td className="p-3 text-right text-slate-600">{msw.toFixed(2)}</td>
-                           <td className="p-3 text-right">-</td><td className="p-3 text-right">-</td>
-                        </tr>
+                     <tbody className="divide-y divide-slate-100">
+                        <tr><td className="p-3 font-sans">Between</td><td className="p-3 text-right">{ssb.toFixed(2)}</td><td className="p-3 text-right">{dfb}</td><td className="p-3 text-right">{msb.toFixed(2)}</td><td className="p-3 text-right font-bold text-indigo-600">{fStat.toFixed(3)}</td><td className={`p-3 text-right font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue.toFixed(4)}</td></tr>
+                        <tr><td className="p-3 font-sans">Within</td><td className="p-3 text-right">{ssw.toFixed(2)}</td><td className="p-3 text-right">{dfw}</td><td className="p-3 text-right">{msw.toFixed(2)}</td><td className="p-3 text-right">-</td><td className="p-3 text-right">-</td></tr>
                      </tbody>
-                     <tfoot className="bg-slate-100 border-t border-slate-200 font-bold text-slate-800 font-mono">
-                        <tr>
-                           <td className="p-3 font-sans">Tổng (Total)</td>
-                           <td className="p-3 text-right">{(ssb + ssw).toFixed(2)}</td>
-                           <td className="p-3 text-right">{dfb + dfw}</td>
-                           <td className="p-3 text-right">-</td><td className="p-3 text-right">-</td><td className="p-3 text-right">-</td>
-                        </tr>
-                     </tfoot>
                   </table>
-               </div>
-
-               <div className="mb-5 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                  <h5 className="font-bold text-slate-700 mb-3 text-sm">Thống kê mô tả theo nhóm ({testVar2})</h5>
-                  <div className="flex flex-wrap gap-4">
-                     {groupStats.map((g, i) => (
-                        <div key={i} className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-sm flex-1 min-w-[180px]">
-                           <div className="font-bold text-slate-700 mb-1 truncate" title={g.name}>{g.name}</div> 
-                           <div className="text-slate-500 text-[12px]">
-                              N = <span className="font-bold text-slate-700">{g.count}</span><br/>
-                              Mean = <span className="font-mono text-indigo-600 font-bold">{g.mean.toFixed(2)}</span><br/>
-                              StdDev = <span className="font-mono text-slate-600">{g.std.toFixed(2)}</span>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
-
-               <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có sự khác biệt mang ý nghĩa thống kê về trung bình của biến "${testVar1}" giữa các nhóm "${testVar2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt về trung bình của biến "${testVar1}" giữa các nhóm "${testVar2}" (p >= 0.05).`}
                </div>
             </div>
          );
@@ -2218,33 +1967,17 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
          const { variables, matrix } = testResult;
          return (
             <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <h4 className="font-bold text-indigo-900 text-lg mb-3">Ma trận tương quan Pearson (Heatmap)</h4>
-               <p className="text-sm text-slate-600 mb-4">Màu xanh lá thể hiện tương quan thuận (cùng tăng/giảm), màu đỏ thể hiện tương quan nghịch. Màu càng đậm, mức độ tương quan càng mạnh.</p>
-               
+               <h4 className="font-bold text-indigo-900 text-lg mb-3">Ma trận tương quan Pearson</h4>
                <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm bg-white">
                   <table className="w-full text-sm text-center border-collapse">
-                     <thead className="bg-slate-50">
-                        <tr>
-                           <th className="p-3 border-b border-r border-slate-200 bg-slate-100 font-semibold text-slate-600 w-32">Biến số</th>
-                           {variables.map(v => <th key={v} className="p-3 border-b border-slate-200 font-semibold text-slate-700 writing-mode-vertical min-w-[80px]" title={v}>
-                               <div className="truncate w-24 mx-auto text-[13px]">{v}</div>
-                           </th>)}
-                        </tr>
-                     </thead>
+                     <thead><tr><th className="p-3 bg-slate-100 font-semibold border-b border-r">Biến số</th>{variables.map(v => <th key={v} className="p-3 border-b">{v}</th>)}</tr></thead>
                      <tbody className="divide-y divide-slate-100 font-mono">
                         {matrix.map((row, i) => (
-                           <tr key={i} className="hover:bg-slate-50/30 transition-colors">
-                              <td className="p-3 border-r border-slate-200 bg-slate-50 text-left font-sans font-medium text-slate-700 truncate max-w-[150px]" title={row.varName}>{row.varName}</td>
-                              {row.correlations.map((val, j) => {
-                                 let displayVal = isNaN(val) ? '-' : val.toFixed(2);
-                                 let bgColor = i === j ? '#f1f5f9' : getCorrelationColor(val);
-                                 let textColor = i === j ? '#94a3b8' : (Math.abs(val) > 0.5 ? '#ffffff' : '#334155');
-                                 return (
-                                     <td key={j} className="p-3 border-x border-slate-50 transition-all font-bold" style={{ backgroundColor: bgColor, color: textColor }}>
-                                         {displayVal}
-                                     </td>
-                                 );
-                              })}
+                           <tr key={i}>
+                              <td className="p-3 border-r bg-slate-50 text-left font-sans font-medium">{row.varName}</td>
+                              {row.correlations.map((val, j) => (
+                                 <td key={j} className="p-3 font-bold" style={{ backgroundColor: getCorrelationColor(val), color: Math.abs(val) > 0.5 ? '#fff' : '#334' }}>{val.toFixed(2)}</td>
+                              ))}
                            </tr>
                         ))}
                      </tbody>
@@ -2252,175 +1985,47 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                </div>
             </div>
          );
-      } else if (testResult.type === 'regression_scatter') {
-         const { slope, intercept, rSquared, pValue, tStat, df, n, dataPoints, trendline, xVar, yVar } = testResult;
-         const isSig = pValue < 0.05;
-         const sign = intercept >= 0 ? '+' : '-';
-         
-         return (
-            <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <h4 className="font-bold text-indigo-900 text-lg mb-3">Phân tích Hồi quy tuyến tính & Biểu đồ phân tán</h4>
-               
-               <div className="flex flex-col xl:flex-row gap-6 mb-5">
-                  <div className="flex-1 overflow-hidden bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                     <MiniScatterChart dataPoints={dataPoints} trendline={trendline} xLabel={xVar} yLabel={yVar} />
-                  </div>
-                  <div className="w-full xl:w-[320px] shrink-0 flex flex-col gap-3">
-                     <div className="bg-slate-800 p-5 rounded-lg border border-slate-700 shadow-sm text-white">
-                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2">Phương trình hồi quy</div>
-                        <div className="text-lg font-mono font-bold leading-relaxed break-words">
-                           y = {slope.toFixed(4)}x {sign} {Math.abs(intercept).toFixed(4)}
-                        </div>
-                        <div className="text-[11px] text-slate-400 mt-2 italic">(Dự đoán {yVar} dựa trên {xVar})</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">Số lượng mẫu (N)</div>
-                        <div className="text-xl font-mono font-bold text-slate-700">{n}</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide" title="Hệ số xác định: % sự biến thiên của Y được giải thích bởi X">Độ phù hợp ($R^2$)</div>
-                        <div className="text-xl font-mono font-bold text-indigo-600">{(rSquared * 100).toFixed(1)}%</div>
-                     </div>
-                     <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm flex justify-between items-center">
-                        <div className="text-xs font-bold text-slate-500 uppercase tracking-wide">P-value (của hệ số góc)</div>
-                        <div className={`text-xl font-mono font-bold ${isSig ? 'text-emerald-600' : 'text-rose-500'}`}>{pValue < 0.001 ? '< 0.001' : pValue.toFixed(4)}</div>
-                     </div>
-                  </div>
-               </div>
-
-               <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có bằng chứng thống kê cho thấy sự thay đổi của "${xVar}" có thể dùng để giải thích (dự đoán) sự thay đổi của "${yVar}" (p < 0.05). Mô hình giải thích được ${(rSquared * 100).toFixed(1)}% sự biến thiên.` : `Chưa đủ bằng chứng để kết luận "${xVar}" có khả năng dự đoán tuyến tính "${yVar}" (p >= 0.05).`}
-               </div>
-            </div>
-         );
       } else if (testResult.type === 'boxplot') {
          const { boxData, globalMin, globalMax, yVar, xVar } = testResult;
          const range = globalMax - globalMin;
          const getPct = (val) => range === 0 ? 50 : ((val - globalMin) / range) * 100;
-
          return (
-            <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl">
                <h4 className="font-bold text-indigo-900 text-lg mb-1">Biểu đồ Hộp (Box-plot)</h4>
-               <p className="text-sm text-slate-600 mb-5">Phân bố của <strong>{yVar}</strong> theo các nhóm của <strong>{xVar}</strong>. Thể hiện Min, Q1, Median, Q3, Max.</p>
-               
-               <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm overflow-x-auto custom-scrollbar">
+               <div className="bg-white p-6 rounded-lg border border-slate-200 mt-4 overflow-x-auto">
                   <div className="min-w-[600px]">
-                     {/* Scale Header */}
-                     <div className="flex ml-[160px] mb-2 relative h-6 text-xs font-bold text-slate-400 font-mono">
-                         <div className="absolute left-0 -translate-x-1/2">{globalMin.toFixed(1)}</div>
-                         <div className="absolute left-1/4 -translate-x-1/2">{(globalMin + range*0.25).toFixed(1)}</div>
-                         <div className="absolute left-1/2 -translate-x-1/2">{(globalMin + range*0.5).toFixed(1)}</div>
-                         <div className="absolute left-3/4 -translate-x-1/2">{(globalMin + range*0.75).toFixed(1)}</div>
-                         <div className="absolute right-0 translate-x-1/2">{globalMax.toFixed(1)}</div>
-                     </div>
-
-                     {/* Trục kẻ sọc nền */}
-                     <div className="relative border-t border-slate-200 pt-4">
-                        <div className="absolute top-4 bottom-0 left-[160px] w-px bg-slate-100"></div>
-                        <div className="absolute top-4 bottom-0 left-[calc(160px+25%)] w-px bg-slate-100"></div>
-                        <div className="absolute top-4 bottom-0 left-[calc(160px+50%)] w-px bg-slate-200 border-dashed border-l"></div>
-                        <div className="absolute top-4 bottom-0 left-[calc(160px+75%)] w-px bg-slate-100"></div>
-                        <div className="absolute top-4 bottom-0 right-0 w-px bg-slate-100"></div>
-
-                        {boxData.map((d, i) => (
-                           <div key={i} className="flex items-center mb-6 relative z-10 group">
-                              <div className="w-[150px] pr-4 text-right">
-                                 <div className="font-bold text-slate-700 text-sm truncate" title={d.name}>{d.name}</div>
-                                 <div className="text-[11px] text-slate-400 font-medium mt-0.5">N = {d.count}</div>
-                              </div>
-                              <div className="flex-1 relative h-12">
-                                 {d.count > 0 ? (
-                                    <>
-                                       {/* Đường nối Whiskers */}
-                                       <div className="absolute top-1/2 h-0.5 bg-slate-300" style={{ left: `${getPct(d.min)}%`, width: `${getPct(d.max) - getPct(d.min)}%`, transform: 'translateY(-50%)' }}></div>
-                                       {/* Chặn 2 đầu Whiskers */}
-                                       <div className="absolute top-1/4 h-1/2 w-0.5 bg-slate-400" style={{ left: `${getPct(d.min)}%` }}></div>
-                                       <div className="absolute top-1/4 h-1/2 w-0.5 bg-slate-400" style={{ left: `${getPct(d.max)}%` }}></div>
-                                       {/* Hộp Box (Q1 to Q3) */}
-                                       <div className="absolute top-1/4 h-1/2 bg-sky-200 border-2 border-sky-600 rounded-sm shadow-sm transition-all group-hover:bg-sky-300" 
-                                            style={{ left: `${getPct(d.q1)}%`, width: `${Math.max(0.5, getPct(d.q3) - getPct(d.q1))}%` }}>
-                                          {/* Vạch Trung vị (Median) */}
-                                          <div className="absolute top-0 bottom-0 w-0.5 bg-rose-500 z-10" style={{ left: `${(getPct(d.median) - getPct(d.q1)) / (getPct(d.q3) - getPct(d.q1)) * 100}%`, marginLeft: '-1px' }}></div>
-                                       </div>
-
-                                       {/* Tooltip ẩn hiện khi hover */}
-                                       <div className="opacity-0 group-hover:opacity-100 absolute -top-10 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[11px] px-3 py-1.5 rounded shadow-lg pointer-events-none whitespace-nowrap z-50 transition-opacity">
-                                          Min: <span className="text-sky-300">{d.min.toFixed(2)}</span> | Q1: <span className="text-sky-300">{d.q1.toFixed(2)}</span> | Median: <span className="text-rose-400">{d.median.toFixed(2)}</span> | Q3: <span className="text-sky-300">{d.q3.toFixed(2)}</span> | Max: <span className="text-sky-300">{d.max.toFixed(2)}</span>
-                                       </div>
-                                    </>
-                                 ) : (
-                                    <div className="text-xs text-slate-400 italic flex items-center h-full">Không có dữ liệu số</div>
-                                 )}
+                     {boxData.map((d, i) => (
+                        <div key={i} className="flex items-center mb-6 relative group">
+                           <div className="w-[150px] pr-4 text-right"><div className="font-bold text-slate-700 text-sm truncate">{d.name}</div></div>
+                           <div className="flex-1 relative h-10 bg-slate-50 rounded">
+                              <div className="absolute top-1/2 h-0.5 bg-slate-300" style={{ left: `${getPct(d.min)}%`, width: `${getPct(d.max) - getPct(d.min)}%`, transform: 'translateY(-50%)' }}></div>
+                              <div className="absolute top-1/4 h-1/2 bg-sky-200 border border-sky-600" style={{ left: `${getPct(d.q1)}%`, width: `${getPct(d.q3) - getPct(d.q1)}%` }}>
+                                 <div className="absolute top-0 bottom-0 w-1 bg-rose-500" style={{ left: `${(getPct(d.median) - getPct(d.q1)) / (getPct(d.q3) - getPct(d.q1)) * 100}%` }}></div>
                               </div>
                            </div>
-                        ))}
-                     </div>
+                        </div>
+                     ))}
                   </div>
                </div>
             </div>
          );
       } else if (testResult.type === 'logistic') {
-         const { modelResults, n, pseudoR2, yVar, eventClass, baselineClass, converged } = testResult;
-         
+         const { modelResults, n, pseudoR2, yVar, eventClass, baselineClass } = testResult;
          return (
-            <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl animate-in fade-in slide-in-from-top-4 duration-300">
-               <div className="flex items-start justify-between mb-4">
-                  <div>
-                     <h4 className="font-bold text-indigo-900 text-lg">Phân tích Hồi quy Logistic (Đơn/Đa biến)</h4>
-                     <p className="text-sm text-slate-600 mt-1">Dự đoán biến phụ thuộc: <strong>{yVar}</strong> (Sự kiện: <span className="text-rose-600 font-bold">{eventClass}</span> vs Nền: <span className="text-slate-500 font-bold">{baselineClass}</span>)</p>
-                  </div>
-                  <div className="flex gap-4 text-sm bg-white px-4 py-2 rounded-lg border border-slate-200 shadow-sm">
-                     <div className="flex flex-col"><span className="text-slate-500 font-medium">Cỡ mẫu (N)</span><span className="font-bold text-slate-800">{n}</span></div>
-                     <div className="w-px bg-slate-200"></div>
-                     <div className="flex flex-col" title="McFadden's R-Squared"><span className="text-slate-500 font-medium">Pseudo R²</span><span className="font-bold text-indigo-600">{(pseudoR2 * 100).toFixed(2)}%</span></div>
-                  </div>
-               </div>
-               
-               <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
+            <div className="mt-6 p-5 border border-indigo-100 bg-indigo-50/30 rounded-xl">
+               <h4 className="font-bold text-indigo-900 text-lg mb-3">Hồi quy Logistic</h4>
+               <div className="bg-white rounded-lg border overflow-x-auto shadow-sm">
                   <table className="w-full text-sm text-left">
-                     <thead className="bg-slate-50 border-b border-slate-200">
-                        <tr>
-                           <th className="p-3 font-semibold text-slate-700">Yếu tố nguy cơ (Biến Độc Lập)</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">Hệ số (β)</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right" title="Standard Error">Sai số chuẩn (SE)</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">Z-value</th>
-                           <th className="p-3 font-semibold text-slate-700 text-right">P-value</th>
-                           <th className="p-3 font-bold text-indigo-800 bg-indigo-50 text-right" title="Odds Ratio">Tỷ suất chênh (OR)</th>
-                           <th className="p-3 font-bold text-indigo-800 bg-indigo-50 text-center">95% CI cho OR</th>
-                        </tr>
-                     </thead>
-                     <tbody className="divide-y divide-slate-100 font-mono">
-                        {modelResults.map((res, i) => {
-                           const isSig = res.pValue < 0.05 && i > 0;
-                           return (
-                              <tr key={i} className="hover:bg-slate-50/50">
-                                 <td className="p-3 font-medium text-slate-700 font-sans">{res.name}</td>
-                                 <td className="p-3 text-right text-slate-600">{res.coef.toFixed(4)}</td>
-                                 <td className="p-3 text-right text-slate-500">{res.se.toFixed(4)}</td>
-                                 <td className="p-3 text-right text-slate-600">{res.zStat.toFixed(3)}</td>
-                                 <td className={`p-3 text-right font-bold ${isSig ? 'text-emerald-600' : (i===0 ? 'text-slate-500' : 'text-slate-500')}`}>
-                                     {res.pValue < 0.001 ? '< 0.001' : res.pValue.toFixed(4)}
-                                 </td>
-                                 <td className="p-3 text-right text-indigo-700 font-bold bg-indigo-50/30">
-                                     {i === 0 ? '-' : safeRenderVal(res.or)}
-                                 </td>
-                                 <td className="p-3 text-center text-slate-600 bg-indigo-50/30 text-[13px]">
-                                     {i === 0 ? '-' : `[${safeRenderVal(res.ci_low)} - ${safeRenderVal(res.ci_high)}]`}
-                                 </td>
-                              </tr>
-                           );
-                        })}
+                     <thead className="bg-slate-50"><tr><th className="p-3">Biến Độc Lập</th><th className="p-3 text-right">β</th><th className="p-3 text-right">P-value</th><th className="p-3 text-right font-bold text-indigo-800 bg-indigo-50">OR</th><th className="p-3 text-center bg-indigo-50">95% CI</th></tr></thead>
+                     <tbody className="divide-y font-mono">
+                        {modelResults.map((res, i) => (
+                           <tr key={i}>
+                              <td className="p-3 font-sans">{res.name}</td><td className="p-3 text-right">{res.coef.toFixed(4)}</td><td className={`p-3 text-right ${res.pValue < 0.05 ? 'text-emerald-600 font-bold' : ''}`}>{res.pValue.toFixed(4)}</td><td className="p-3 text-right font-bold">{safeRenderVal(res.or)}</td><td className="p-3 text-center text-xs">[{safeRenderVal(res.ci_low)} - {safeRenderVal(res.ci_high)}]</td>
+                           </tr>
+                        ))}
                      </tbody>
                   </table>
                </div>
-               
-               {!converged && (
-                  <div className="mt-3 text-[13px] font-medium text-amber-700 flex items-start gap-2 bg-amber-50 p-3 rounded-lg border border-amber-200">
-                     <AlertTriangle size={18} className="shrink-0 mt-0.5"/> 
-                     <span>Cảnh báo: Mô hình chưa hội tụ tối đa. Có thể do dữ liệu phân tách hoàn hảo (Perfect separation) hoặc biến độc lập có tương quan quá mạnh.</span>
-                  </div>
-               )}
             </div>
          );
       }
@@ -2436,11 +2041,37 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
               </h2>
           </div>
           <div className="flex gap-3">
+            <button onClick={generateFullAiReport} disabled={isGeneratingReport || dataset.rows.length === 0} className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2 font-bold hover:bg-indigo-700 shadow-sm transition-colors">
+              {isGeneratingReport ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <ClipboardCheck size={20} />} Báo Cáo Tổng Thể (AI)
+            </button>
             <button onClick={generateAnomaliesInsight} disabled={selectedVariables.length === 0} className="px-5 py-2.5 bg-amber-500 text-white rounded-xl flex items-center gap-2 font-bold hover:bg-amber-600 shadow-sm transition-colors">
               <ShieldAlert size={20} /> Tìm Bất Thường
             </button>
           </div>
         </div>
+
+        {aiReport && (
+          <div className="mb-8 bg-white border-2 border-indigo-100 p-8 rounded-3xl shadow-xl relative animate-in zoom-in-95 duration-500">
+             <button onClick={() => setAiReport('')} className="absolute top-6 right-6 text-slate-400 bg-slate-50 p-1.5 rounded-full hover:bg-rose-50 hover:text-rose-500 transition-colors">✕</button>
+             <div className="flex items-center gap-3 mb-6 border-b border-indigo-50 pb-5">
+                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                   <ClipboardCheck size={24} />
+                </div>
+                <div>
+                   <h3 className="font-extrabold text-slate-800 text-xl">Báo Cáo Phân Tích Tổng Thể</h3>
+                   <p className="text-sm text-indigo-500 font-medium italic">Tự động khởi tạo bởi trí tuệ nhân tạo Gemini</p>
+                </div>
+             </div>
+             <div className="prose prose-slate max-w-none">
+                {renderMiniMarkdown(aiReport)}
+             </div>
+             <div className="mt-8 pt-6 border-t border-slate-100 flex justify-end">
+                <button onClick={() => window.print()} className="flex items-center gap-2 text-slate-500 hover:text-indigo-600 font-bold text-sm px-4 py-2 rounded-lg hover:bg-indigo-50 transition-colors">
+                   <Printer size={18} /> In báo cáo này
+                </button>
+             </div>
+          </div>
+        )}
 
         {anomaliesInsight && (
           <div className="mb-8 bg-white border-l-4 border-amber-500 p-6 rounded-2xl shadow-sm relative">
@@ -2467,17 +2098,17 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
 
         {numericVars.length > 0 && (
           <div className="mb-8 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-5 bg-slate-50/80 border-b border-slate-200"><h3 className="font-bold text-slate-800 text-lg flex items-center gap-2.5"><Activity size={22} className="text-sky-500"/> Chỉ số Định lượng (Thống kê mô tả)</h3></div>
+            <div className="p-5 bg-slate-50/80 border-b border-slate-200"><h3 className="font-bold text-slate-800 text-lg flex items-center gap-2.5"><Activity size={22} className="text-sky-500"/> Chỉ số Định lượng</h3></div>
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-[15px]">
                 <thead>
                   <tr className="bg-white">
-                    <th className="p-4 border-b border-r border-slate-100 font-bold text-slate-600">Biến số</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">N</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">Min</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">Max</th><th className="p-4 border-b border-sky-100 text-sky-800 bg-sky-50/50 text-right font-bold">Trung bình</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">Trung vị</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">StdDev</th><th className="p-4 border-b border-emerald-100 text-emerald-800 bg-emerald-50/50 text-center font-bold">95% Khoảng tin cậy</th>
+                    <th className="p-4 border-b border-r border-slate-100 font-bold text-slate-600">Biến số</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">N</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">Min</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">Max</th><th className="p-4 border-b border-sky-100 text-sky-800 bg-sky-50/50 text-right font-bold">Trung bình</th><th className="p-4 border-b border-slate-100 text-right font-bold text-slate-600">StdDev</th><th className="p-4 border-b border-emerald-100 text-emerald-800 bg-emerald-50/50 text-center font-bold">95% CI</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 font-mono">
                   {numericVars.map(h => (
-                    <tr key={h} className="hover:bg-slate-50/50"><td className="p-4 font-semibold text-slate-700 border-r border-slate-100">{h}</td><td className="p-4 text-right text-slate-500">{dataStats[h].count}</td><td className="p-4 text-right text-slate-600 font-mono">{dataStats[h].min}</td><td className="p-4 text-right text-slate-600 font-mono">{dataStats[h].max}</td><td className="p-4 text-right font-bold text-sky-700 bg-sky-50/20 font-mono text-[16px]">{dataStats[h].mean}</td><td className="p-4 text-right text-slate-600 font-mono">{dataStats[h].median}</td><td className="p-4 text-right text-slate-500 font-mono">{dataStats[h].stdDev}</td><td className="p-4 text-center text-emerald-700 bg-emerald-50/20 font-mono text-sm tracking-wide">{dataStats[h].ci95}</td></tr>
+                    <tr key={h} className="hover:bg-slate-50/50"><td className="p-4 font-sans font-semibold text-slate-700 border-r border-slate-100">{h}</td><td className="p-4 text-right">{dataStats[h].count}</td><td className="p-4 text-right">{dataStats[h].min}</td><td className="p-4 text-right">{dataStats[h].max}</td><td className="p-4 text-right font-bold text-sky-700 bg-sky-50/20">{dataStats[h].mean}</td><td className="p-4 text-right">{dataStats[h].stdDev}</td><td className="p-4 text-center text-emerald-700 bg-emerald-50/20 text-sm">{dataStats[h].ci95}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -2491,7 +2122,7 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 p-5">
               {categoricalVars.map(h => (
                 <div key={h} className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                  <div className="bg-slate-50 p-3 border-b border-slate-200 flex justify-between items-center"><span className="font-bold text-slate-700">{h}</span><span className="text-[12px] font-medium bg-white px-2 py-1 rounded-md border text-slate-500">N={dataStats[h].count} | {dataStats[h].unique} nhóm</span></div>
+                  <div className="bg-slate-50 p-3 border-b border-slate-200 flex justify-between items-center"><span className="font-bold text-slate-700">{h}</span><span className="text-[12px] font-medium bg-white px-2 py-1 rounded-md border text-slate-500">N={dataStats[h].count}</span></div>
                   <ul className="divide-y divide-slate-100 text-[14px] max-h-56 overflow-y-auto custom-scrollbar">
                     {dataStats[h].frequencies.map((f, i) => (
                       <li key={i} className="flex justify-between p-3 hover:bg-slate-50/80"><span className="truncate mr-3 font-medium text-slate-600">{f.label}</span><div className="flex gap-4 shrink-0 items-center"><span className="font-bold text-slate-700">{f.count}</span><span className="text-[12px] w-12 text-right font-medium text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{f.percent}%</span></div></li>
@@ -2503,7 +2134,6 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
           </div>
         )}
 
-        {/* --- ADDED STATISTICAL TESTS SECTION --- */}
         <div className="mb-8 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
            <h3 className="text-[18px] font-bold text-slate-800 mb-4 flex items-center gap-2">
               <Microscope size={22} className="text-indigo-500" /> Phân Tích Kiểm Định Chuyên Sâu
@@ -2513,49 +2143,40 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                  <label className="block text-sm font-semibold text-slate-600 mb-2">Loại Kiểm Định / Biểu Đồ Đặc Thù</label>
                  <select value={advancedTest} onChange={(e) => { setAdvancedTest(e.target.value); setTestVar1(''); setTestVar2(''); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50 font-medium">
                     <option value="">-- Chọn công cụ phân tích --</option>
-                    <optgroup label="Tương quan & Hồi quy (Nhóm 3)">
-                       <option value="correlation">Ma trận Tương quan Pearson (Tất cả biến định lượng)</option>
-                       <option value="regression_scatter">Hồi quy Tuyến tính & Scatter Plot (2 Biến định lượng)</option>
-                       <option value="logistic">Hồi quy Logistic Đơn/Đa biến (Dự đoán Nhị phân)</option>
+                    <optgroup label="Hồi quy & Tương quan">
+                       <option value="correlation">Ma trận Tương quan Pearson</option>
+                       <option value="regression_scatter">Hồi quy Tuyến tính & Scatter Plot</option>
+                       <option value="logistic">Hồi quy Logistic (Dự đoán Nhị phân)</option>
                     </optgroup>
-                    <optgroup label="Biểu đồ chuyên sâu (Nhóm 4)">
-                       <option value="boxplot">Biểu đồ Hộp Box-plot (Phát hiện Outlier)</option>
+                    <optgroup label="Biểu đồ chuyên sâu">
+                       <option value="boxplot">Biểu đồ Hộp Box-plot</option>
                     </optgroup>
-                    <optgroup label="Kiểm định giả thuyết (Hypothesis)">
-                       <option value="chisquare">Bảng chéo & Chi-Square (2 Biến Định Tính)</option>
-                       <option value="ttest_ind">T-test Độc lập (1 Định lượng vs 1 Phân nhóm)</option>
-                       <option value="ttest_paired">T-test Bắt cặp (2 Biến Định lượng - Trc/Sau)</option>
-                       <option value="anova">One-way ANOVA (1 Định Lượng vs 1 Phân nhóm &gt;=3)</option>
+                    <optgroup label="Kiểm định giả thuyết">
+                       <option value="chisquare">Chi-Square (Định tính)</option>
+                       <option value="ttest_ind">T-test Độc lập</option>
+                       <option value="ttest_paired">T-test Bắt cặp</option>
+                       <option value="anova">ANOVA (So sánh trung bình &gt;=3 nhóm)</option>
                     </optgroup>
                  </select>
               </div>
 
-              {advancedTest === 'correlation' && (
-                 <div className="flex-1 min-w-[300px] text-sm text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex items-center gap-2">
-                    <Info size={20} className="shrink-0" /> Hệ thống sẽ tự động tính ma trận tương quan cho toàn bộ các biến số (định lượng) đang được tích chọn ở bảng phía trên.
-                 </div>
-              )}
-
               {advancedTest === 'logistic' && (
                  <>
                     <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến Phụ Thuộc Y (Nhị phân)</label>
-                       <select value={testVar1} onChange={(e) => { setTestVar1(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
-                           <option value="">-- Chọn biến kết cuộc --</option>
+                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến Y (Nhị phân)</label>
+                       <select value={testVar1} onChange={(e) => setTestVar1(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50">
+                           <option value="">-- Chọn biến --</option>
                            {dataset.headers.map(v => <option key={v} value={v}>{v}</option>)}
                        </select>
                     </div>
                     <div className="flex-1 min-w-[300px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">Các Biến Độc Lập X (Định lượng)</label>
-                       <div className="border border-slate-300 rounded-xl p-2.5 bg-slate-50 h-[120px] overflow-y-auto grid grid-cols-2 gap-2 custom-scrollbar">
+                       <label className="block text-sm font-semibold text-slate-600 mb-2">Các Biến X (Định lượng)</label>
+                       <div className="border rounded-xl p-2 bg-slate-50 h-[100px] overflow-y-auto grid grid-cols-2 gap-1 custom-scrollbar">
                          {numericVars.filter(h => h !== testVar1).map(h => (
-                           <label key={h} className="flex items-center gap-2 text-sm cursor-pointer p-1 hover:bg-slate-200 rounded transition-colors">
-                             <input type="checkbox" className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                               checked={multiTestVars.includes(h)} onChange={() => {
-                                 let newVars = multiTestVars.includes(h) ? multiTestVars.filter(v=>v!==h) : [...multiTestVars, h];
-                                 setMultiTestVars(newVars);
-                                 setTestResult(null);
-                               }} />
+                           <label key={h} className="flex items-center gap-2 text-sm p-1 hover:bg-white rounded cursor-pointer">
+                             <input type="checkbox" checked={multiTestVars.includes(h)} onChange={() => {
+                               setMultiTestVars(prev => prev.includes(h) ? prev.filter(v=>v!==h) : [...prev, h]);
+                             }} />
                              <span className="truncate">{h}</span>
                            </label>
                          ))}
@@ -2564,58 +2185,20 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                  </>
               )}
 
-              {advancedTest === 'chisquare' && (
+              {advancedTest !== '' && advancedTest !== 'correlation' && advancedTest !== 'logistic' && (
                  <>
                     <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến Hàng (Định tính)</label>
-                       <select value={testVar1} onChange={(e) => { setTestVar1(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
+                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến số 1</label>
+                       <select value={testVar1} onChange={(e) => setTestVar1(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50">
                            <option value="">-- Chọn biến --</option>
-                           {categoricalVars.map(v => <option key={v} value={v}>{v}</option>)}
+                           {dataset.headers.map(v => <option key={v} value={v}>{v}</option>)}
                        </select>
                     </div>
                     <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến Cột (Định tính)</label>
-                       <select value={testVar2} onChange={(e) => { setTestVar2(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
+                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến số 2</label>
+                       <select value={testVar2} onChange={(e) => setTestVar2(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50">
                            <option value="">-- Chọn biến --</option>
-                           {categoricalVars.map(v => <option key={v} value={v}>{v}</option>)}
-                       </select>
-                    </div>
-                 </>
-              )}
-
-              {(advancedTest === 'anova' || advancedTest === 'ttest_ind' || advancedTest === 'boxplot') && (
-                 <>
-                    <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến Phụ Thuộc (Định lượng)</label>
-                       <select value={testVar1} onChange={(e) => { setTestVar1(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
-                           <option value="">-- Chọn biến --</option>
-                           {numericVars.map(v => <option key={v} value={v}>{v}</option>)}
-                       </select>
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">Biến Phân Nhóm (Định tính)</label>
-                       <select value={testVar2} onChange={(e) => { setTestVar2(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
-                           <option value="">-- Chọn biến --</option>
-                           {categoricalVars.map(v => <option key={v} value={v}>{v}</option>)}
-                       </select>
-                    </div>
-                 </>
-              )}
-
-              {(advancedTest === 'ttest_paired' || advancedTest === 'regression_scatter') && (
-                 <>
-                    <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">{advancedTest === 'regression_scatter' ? 'Biến Độc Lập (Trục X)' : 'Biến Số 1 (VD: Trước)'}</label>
-                       <select value={testVar2} onChange={(e) => { setTestVar2(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
-                           <option value="">-- Chọn biến --</option>
-                           {numericVars.map(v => <option key={v} value={v}>{v}</option>)}
-                       </select>
-                    </div>
-                    <div className="flex-1 min-w-[200px]">
-                       <label className="block text-sm font-semibold text-slate-600 mb-2">{advancedTest === 'regression_scatter' ? 'Biến Phụ Thuộc (Trục Y)' : 'Biến Số 2 (VD: Sau)'}</label>
-                       <select value={testVar1} onChange={(e) => { setTestVar1(e.target.value); setTestResult(null); }} className="w-full p-2.5 rounded-xl border border-slate-300 outline-none focus:border-indigo-400 bg-slate-50">
-                           <option value="">-- Chọn biến --</option>
-                           {numericVars.map(v => <option key={v} value={v}>{v}</option>)}
+                           {dataset.headers.map(v => <option key={v} value={v}>{v}</option>)}
                        </select>
                     </div>
                  </>
@@ -2623,21 +2206,14 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
 
               <button 
                  onClick={runStatisticalTest} 
-                 disabled={
-                    !advancedTest || 
-                    (advancedTest === 'correlation' && numericVars.length < 2) ||
-                    (advancedTest === 'logistic' && (!testVar1 || multiTestVars.length === 0)) ||
-                    (advancedTest !== 'correlation' && advancedTest !== 'logistic' && (!testVar1 || !testVar2 || testVar1 === testVar2))
-                 } 
-                 className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors h-[46px] shadow-sm flex items-center gap-2"
+                 disabled={!advancedTest || (advancedTest !== 'correlation' && (!testVar1 || (advancedTest !== 'logistic' && !testVar2)))} 
+                 className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors h-[46px]"
               >
-                 <Calculator size={18} /> Phân Tích
+                 Chạy Phân Tích
               </button>
            </div>
-
            {testResult && renderTestResult()}
         </div>
-
       </div>
     );
   };
@@ -2669,56 +2245,34 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
     </div>
   );
 
-  if (!isUiLoaded) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f8fafc', fontFamily: 'sans-serif' }}>
-        <div style={{ width: '50px', height: '50px', border: '5px solid #e2e8f0', borderTopColor: '#0ea5e9', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-        <h2 style={{ color: '#334155', marginTop: '20px', fontWeight: 'bold' }}>Đang thiết lập bộ giao diện đồ họa...</h2>
-        <p style={{ color: '#64748b', marginTop: '8px', fontSize: '14px' }}>Vui lòng đợi vài giây</p>
-        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
-  }
+  if (!isUiLoaded) return <div className="flex items-center justify-center h-screen bg-slate-50 font-bold">Đang tải giao diện...</div>;
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 font-sans overflow-hidden text-slate-800 selection:bg-sky-200">
-      <div className="w-[260px] bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 shrink-0 shadow-2xl z-20">
-        <div className="p-5 bg-slate-950 border-b border-slate-800 group relative">
-          <label className="cursor-pointer block w-full" title="Nhấn để tải lên Logo từ máy tính">
+    <div className="flex h-screen w-full bg-slate-50 font-sans overflow-hidden text-slate-800">
+      <div className="w-[260px] bg-slate-900 text-slate-300 flex flex-col h-full border-r border-slate-800 shrink-0 z-20 shadow-2xl">
+        <div className="p-5 bg-slate-950 border-b border-slate-800">
+          <label className="cursor-pointer block w-full">
             <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-            <div className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+            <div className="flex items-center gap-3">
                {customLogo ? (
-                 <div className="w-[68px] h-[68px] bg-white/5 rounded-xl border border-white/10 flex items-center justify-center shrink-0 relative overflow-hidden shadow-inner group-hover:bg-white/10 transition-colors">
-                   <img src={customLogo} alt="Custom Logo" className="max-w-full max-h-full object-contain p-0.5" />
-                   <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <UploadCloud size={20} className="text-white"/>
-                   </div>
-                 </div>
+                 <div className="w-[60px] h-[60px] bg-white rounded-xl overflow-hidden shrink-0"><img src={customLogo} alt="Logo" className="w-full h-full object-contain" /></div>
                ) : (
-                 <div className="w-[60px] h-[60px] bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl flex items-center justify-center shadow-lg shrink-0 border border-sky-300/30 relative">
-                    <Activity size={28} className="text-white" />
-                    <div className="absolute -bottom-1.5 -right-1.5 bg-slate-800 rounded-full p-1 border border-slate-700 shadow-sm">
-                        <Plus size={12} className="text-white" />
-                    </div>
-                 </div>
+                 <div className="w-[50px] h-[50px] bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shrink-0"><Activity size={24} className="text-white" /></div>
                )}
-               <div>
-                  <h1 className="text-[18px] font-extrabold text-white tracking-wide leading-tight uppercase">CDC<br/><span className="text-sky-400 font-bold tracking-normal capitalize text-[13px]">Hệ Thống Giám Sát</span></h1>
-               </div>
+               <h1 className="text-[16px] font-extrabold text-white tracking-wide uppercase leading-tight">CDC<br/><span className="text-sky-400 text-[11px] capitalize font-bold">Hệ Thống Giám Sát</span></h1>
             </div>
           </label>
         </div>
-
-        <nav className="flex-1 p-4 space-y-2 overflow-y-auto custom-scrollbar mt-2">
-      {[
-        { id: 'upload', icon: <UploadCloud size={20}/>, label: 'Nguồn Dữ Liệu' },
-        { id: 'dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard Biểu Đồ' },
-        { id: 'data', icon: <Table2 size={20}/>, label: 'Bảng Dữ Liệu' },
-        { id: 'analysis', icon: <TrendingUp size={20}/>, label: 'Phân Tích Thống Kê' },
-        { id: 'map', icon: <MapIcon size={20}/>, label: 'Bản Đồ Dịch Tễ (GIS)' },
-        { id: 'chat', icon: <MessageSquare size={20}/>, label: 'Hỏi Đáp AI' },
-      ].map(item => (
-        <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl transition-all font-semibold text-[15px] ${activeTab === item.id ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/50' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}>
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto mt-2">
+          {[
+            { id: 'upload', icon: <UploadCloud size={20}/>, label: 'Nguồn Dữ Liệu' },
+            { id: 'dashboard', icon: <LayoutDashboard size={20}/>, label: 'Dashboard Biểu Đồ' },
+            { id: 'data', icon: <Table2 size={20}/>, label: 'Bảng Dữ Liệu' },
+            { id: 'analysis', icon: <TrendingUp size={20}/>, label: 'Báo Cáo Thống Kê' },
+            { id: 'map', icon: <MapIcon size={20}/>, label: 'Bản Đồ GIS' },
+            { id: 'chat', icon: <MessageSquare size={20}/>, label: 'Hỏi Đáp AI' },
+          ].map(item => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-bold text-[14px] ${activeTab === item.id ? 'bg-sky-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400'}`}>
               {item.icon} <span>{item.label}</span>
             </button>
           ))}
@@ -2727,243 +2281,53 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
 
       <main className="flex-1 flex flex-col relative h-full bg-slate-50">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shrink-0 z-10 shadow-sm">
-          <div className="flex items-center gap-2">
-             <Calendar size={18} className="text-slate-400"/>
-             <span className="text-sm font-medium text-slate-500">{new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
-          </div>
+          <div className="flex items-center gap-2"><Calendar size={18} className="text-slate-400"/><span className="text-sm font-medium text-slate-500">{new Date().toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}</span></div>
           <div className="flex items-center gap-4">
-            {dataset.rows.length > 0 && (
-                <button onClick={handleResetAllData} className="flex items-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full text-[13px] font-bold transition-colors border border-rose-100 shadow-sm">
-                    <RefreshCw size={14} /> Reset Toàn Bộ Hệ Thống
-                </button>
-            )}
-            <span className={`flex items-center gap-2 text-[13px] font-bold px-4 py-1.5 rounded-full border shadow-sm ${dataset.rows.length === 0 ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200'}`}>
-              {dataset.rows.length === 0 ? <AlertTriangle size={16} /> : <CheckCircle size={16} />} {dataset.rows.length === 0 ? 'Chưa có dữ liệu' : `Sẵn sàng (${dataset.rows.length.toLocaleString()} records)`}
-            </span>
+            {dataset.rows.length > 0 && <button onClick={handleResetAllData} className="px-4 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full text-[12px] font-bold border border-rose-100"><RefreshCw size={14} className="inline mr-1" /> Reset Hệ Thống</button>}
+            <span className={`px-4 py-1.5 rounded-full border text-[12px] font-bold ${dataset.rows.length === 0 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-600 border-emerald-200'}`}>{dataset.rows.length === 0 ? 'Chưa có dữ liệu' : `Sẵn sàng: ${dataset.rows.length.toLocaleString()} dòng`}</span>
           </div>
         </header>
 
         <div className="flex-1 overflow-hidden relative">
           {activeTab === 'upload' && (
             <div className="p-8 max-w-4xl mx-auto flex flex-col items-center justify-center h-full">
-              <div className="text-center mb-10"><h2 className="text-[32px] font-extrabold text-slate-800 mb-3">Hệ Thống Phân Tích Dịch Tễ</h2><p className="text-slate-500 text-lg">Hỗ trợ Excel/CSV, cập nhật Bản đồ GIS và Dashboard AI</p></div>
-              <div className="w-full bg-white border-2 border-dashed border-sky-300 rounded-[2rem] p-16 text-center hover:bg-sky-50 transition-colors relative shadow-sm">
+              <div className="text-center mb-10"><h2 className="text-[32px] font-extrabold text-slate-800 mb-3 uppercase tracking-tight">Hệ Thống Phân Tích Dịch Tễ</h2><p className="text-slate-500 text-lg">Hỗ trợ Excel/CSV, cập nhật Bản đồ GIS và Dashboard AI</p></div>
+              <div className="w-full bg-white border-2 border-dashed border-sky-300 rounded-[2.5rem] p-16 text-center hover:bg-sky-50 transition-colors relative shadow-sm group">
                 <input type="file" accept=".csv, .xlsx, .xls" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                <div className="w-24 h-24 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-6"><FileSpreadsheet className="w-12 h-12 text-sky-600" /></div>
+                <div className="w-24 h-24 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><FileSpreadsheet className="w-12 h-12 text-sky-600" /></div>
                 <h3 className="text-2xl font-bold text-slate-700 mb-2">Kéo thả tệp dữ liệu vào đây</h3>
-                <p className="text-slate-500 font-medium">hoặc click để chọn tệp từ máy tính</p>
+                <p className="text-slate-500 font-medium">Hỗ trợ định dạng .xlsx, .csv từ mọi hệ thống báo cáo</p>
               </div>
-              <button onClick={loadSampleData} className="mt-10 px-8 py-4 bg-slate-800 text-white rounded-2xl font-bold hover:bg-slate-900 shadow-xl shadow-slate-900/20 flex items-center gap-3 transition-transform hover:scale-105">
-                <Play size={22} fill="currentColor" /> Chạy Dữ Liệu Mẫu (Demo GIS)
-              </button>
-              
-              {dataset.rows.length > 0 && (
-                 <div className="mt-8 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4">
-                     <div className="text-slate-400 font-medium mb-3">Hoặc</div>
-                     <button onClick={handleResetAllData} className="px-6 py-3 bg-rose-100 text-rose-700 font-bold rounded-xl hover:bg-rose-200 shadow-sm flex items-center gap-2 transition-colors">
-                         <RefreshCw size={18} /> Xóa Dữ Liệu Cũ & Khởi Động Lại
-                     </button>
-                 </div>
-              )}
+              <button onClick={loadSampleData} className="mt-10 px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-black shadow-xl flex items-center gap-3 transition-transform hover:scale-105"><Play size={22} fill="currentColor" /> Chạy Dữ Liệu Mẫu (Demo GIS)</button>
             </div>
           )}
 
           {activeTab === 'map' && dataset.rows.length > 0 && (
             <div className="p-6 h-full flex flex-col bg-slate-50 overflow-hidden">
-              <div className="mb-4 shrink-0">
-                <h2 className="text-[24px] font-extrabold text-slate-800 flex items-center gap-2.5"><MapIcon className="text-sky-600" size={26} /> Bản Đồ Phân Tích Dịch Tễ (GIS)</h2>
-              </div>
-              
+              <div className="mb-4 shrink-0"><h2 className="text-[24px] font-extrabold text-slate-800 flex items-center gap-2.5"><MapIcon className="text-sky-600" size={26} /> Bản Đồ GIS Dịch Tễ</h2></div>
               <div className="flex-1 flex flex-col lg:flex-row gap-6 h-full min-h-0">
-                <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm z-0 relative overflow-hidden flex flex-col group">
-                  <div ref={mapRef} className="flex-1 w-full h-full relative z-10" style={{ backgroundColor: '#ffffff' }}></div>
-                  
+                <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden flex flex-col group">
+                  <div ref={mapRef} className="flex-1 w-full h-full z-10"></div>
                   {(mapPoints.length > 0 || mapGeoJsonFeatures.length > 0) && !isMapAnalyzing && (
-                    <div className="absolute top-4 right-4 z-[1000] flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                       <button onClick={handleResetMapZoom} className="px-3 py-2 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg shadow text-sm font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50" title="Vừa vặn bản đồ">
-                          <Maximize size={16} className="text-slate-500"/>
-                       </button>
-                       <button onClick={handleExportMap} className="px-3 py-2 bg-white/90 backdrop-blur-sm border border-slate-200 rounded-lg shadow text-sm font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50" title="Tải ảnh">
-                          <ImageIcon size={16} className="text-slate-500" />
-                       </button>
-                       <button onClick={() => setIsMapSidebarOpen(!isMapSidebarOpen)} className={`px-3 py-2 backdrop-blur-sm border rounded-lg shadow text-sm font-bold flex items-center gap-2 transition-colors ${isMapSidebarOpen ? 'bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100' : 'bg-slate-800 border-slate-700 text-white hover:bg-slate-900'}`} title={isMapSidebarOpen ? "Ẩn công cụ" : "Hiện công cụ"}>
-                          {isMapSidebarOpen ? <PanelRightClose size={16}/> : <PanelRightOpen size={16}/>}
-                       </button>
+                    <div className="absolute top-4 right-4 z-[1000] flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onClick={handleResetMapZoom} className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50"><Maximize size={16}/></button>
+                       <button onClick={handleExportMap} className="px-3 py-2 bg-white border border-slate-200 rounded-lg shadow-sm text-sm font-bold text-slate-700 flex items-center gap-2 hover:bg-slate-50"><ImageIcon size={16}/></button>
+                       <button onClick={() => setIsMapSidebarOpen(!isMapSidebarOpen)} className={`px-3 py-2 border rounded-lg shadow-sm text-sm font-bold flex items-center gap-2 ${isMapSidebarOpen ? 'bg-sky-50 text-sky-700' : 'bg-slate-800 text-white'}`}>{isMapSidebarOpen ? <PanelRightClose size={16}/> : <PanelRightOpen size={16}/>}</button>
                     </div>
                   )}
-
-                  {!isMapLoaded && <div className="absolute inset-0 flex items-center justify-center font-bold text-slate-400 z-20">Đang khởi tạo bản đồ...</div>}
-                  
-                  {isMapAnalyzing && mapProgressText && (
-                    <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-2xl flex items-center gap-3">
-                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> {mapProgressText}
-                    </div>
-                  )}
-
-                  {(mapConfig.mapStyle === 'heat' || mapConfig.mapStyle === 'polygon') && (mapPoints.length > 0 || mapGeoJsonFeatures.length > 0) && (
-                    <div className="absolute bottom-6 right-6 z-[1000] bg-white/95 backdrop-blur-md p-3.5 rounded-xl shadow-lg border border-slate-200/60 pointer-events-none">
-                      <div className="font-semibold text-slate-500 text-[11px] mb-2 border-b border-slate-100 pb-1.5 uppercase tracking-wide">Mức độ {mapConfig.aggMethod === 'count' ? 'số lượng' : (mapConfig.analyzeVar || '')}</div>
-                      
-                      {mapConfig.colorMode === 'custom' ? (
-                        <div className="flex flex-col gap-1.5">
-                          {mapConfig.customRanges.map((r, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                               <div className="w-4 h-4 rounded-sm border border-slate-200 shadow-sm" style={{backgroundColor: r.color}}></div>
-                               <span className="font-semibold text-slate-600 text-[11px]">{r.min} - {r.max}</span>
-                            </div>
-                          ))}
-                        </div>
-                      ) : mapConfig.colorMode !== 'auto' ? (
-                         <div className="flex flex-col gap-1.5">
-                           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-sm border" style={{backgroundColor: '#ffffb2'}}></div><span className="font-semibold text-slate-600 text-[11px]">Thấp</span></div>
-                           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-sm border" style={{backgroundColor: '#fd8d3c'}}></div><span className="font-semibold text-slate-600 text-[11px]">Trung bình</span></div>
-                           <div className="flex items-center gap-2"><div className="w-4 h-4 rounded-sm border" style={{backgroundColor: '#b10026'}}></div><span className="font-semibold text-slate-600 text-[11px]">Cao</span></div>
-                         </div>
-                      ) : (
-                        <div className="flex items-center gap-4">
-                           <span className="text-slate-500 font-bold text-[11px] uppercase">Thấp</span>
-                           <div className="w-36 h-3 rounded-full bg-gradient-to-r from-[#ffeda0] via-[#fc4e2a] to-[#800026] shadow-inner border border-slate-200"></div>
-                           <span className="text-slate-500 font-bold text-[11px] uppercase">Cao</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {isMapAnalyzing && <div className="absolute top-6 left-1/2 transform -translate-x-1/2 z-[1000] bg-slate-900 text-white px-5 py-2.5 rounded-full text-sm font-bold shadow-2xl flex items-center gap-3"><div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> {mapProgressText}</div>}
                 </div>
-
                 {isMapSidebarOpen && (
-                  <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-5 overflow-y-auto custom-scrollbar pb-6 pr-2 animate-in slide-in-from-right-8 fade-in duration-300">
+                  <div className="w-full lg:w-[340px] shrink-0 flex flex-col gap-5 overflow-y-auto custom-scrollbar pb-6 pr-2">
                     <div className="bg-white p-5 rounded-2xl border border-sky-100 shadow-sm flex flex-col gap-4">
-                      <h3 className="font-bold text-slate-800 text-[15px] border-b border-slate-100 pb-3 flex items-center gap-2">
-                        <Settings size={18} className="text-sky-600"/> Cấu Hình Bản Đồ
-                      </h3>
-                    <div>
-                      <label className="block text-[12px] font-bold text-slate-500 uppercase mb-1.5">1. Cột Tên Địa Phương</label>
-                      <select value={mapConfig.locationCol} onChange={(e) => setMapConfig({...mapConfig, locationCol: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-[14px] font-medium bg-slate-50 outline-none focus:border-sky-400">
-                        <option value="">-- Chọn cột dữ liệu --</option>
-                        {dataset.headers.map(h => <option key={h} value={h}>{h}</option>)}
-                      </select>
+                      <h3 className="font-bold text-slate-800 text-[15px] border-b pb-3 flex items-center gap-2"><Settings size={18} className="text-sky-600"/> Cấu Hình GIS</h3>
+                      <div><label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Địa Phương</label><select value={mapConfig.locationCol} onChange={(e) => setMapConfig({...mapConfig, locationCol: e.target.value})} className="w-full p-2.5 border rounded-lg text-sm bg-slate-50">{dataset.headers.map(h => <option key={h} value={h}>{h}</option>)}</select></div>
+                      <div><label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Số liệu</label><select value={mapConfig.analyzeVar} onChange={(e) => setMapConfig({...mapConfig, analyzeVar: e.target.value})} className="w-full p-2.5 border rounded-lg text-sm bg-slate-50" disabled={mapConfig.aggMethod === 'count'}>{dataset.headers.filter(h => dataStats[h]?.type === 'numeric').map(h => <option key={h} value={h}>{h}</option>)}</select></div>
+                      <div><label className="block text-[11px] font-bold text-slate-500 uppercase mb-1.5">Tính toán</label><select value={mapConfig.aggMethod} onChange={(e) => setMapConfig({...mapConfig, aggMethod: e.target.value})} className="w-full p-2.5 border rounded-lg text-sm bg-slate-50"><option value="count">Đếm ca</option><option value="sum">Tổng cộng</option><option value="mean">Trung bình</option></select></div>
+                      <div><label className="block text-[11px] font-bold text-sky-600 uppercase mb-1.5">Kiểu hiển thị</label><select value={mapConfig.mapStyle} onChange={(e) => setMapConfig({...mapConfig, mapStyle: e.target.value})} className="w-full p-2.5 border-2 border-sky-200 rounded-lg text-sm font-bold bg-sky-50"><option value="polygon">Vùng ranh giới</option><option value="heat">Bản đồ nhiệt</option><option value="bubble">Bong bóng</option></select></div>
+                      <button onClick={handleAnalyzeMapWithAI} disabled={isMapAnalyzing} className="w-full h-11 bg-slate-900 text-white font-bold rounded-lg hover:bg-black transition-colors flex items-center justify-center gap-2">Cập nhật bản đồ</button>
                     </div>
-
-                    {/* BỔ SUNG TÍNH NĂNG BỘ LỌC */}
-                    <div className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
-                       <label className="block text-[12px] font-bold text-indigo-700 uppercase mb-2 flex items-center gap-1.5"><Filter size={14}/> Bộ Lọc Bản Đồ (Tùy chọn)</label>
-                       <div className="flex flex-col gap-2">
-                          <select value={mapConfig.filterCol} onChange={(e) => setMapConfig({...mapConfig, filterCol: e.target.value, filterVal: ''})} className="w-full p-2 text-[13px] border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-400 text-slate-700">
-                             <option value="">-- Chọn cột để lọc (VD: Tỉnh/Thành) --</option>
-                             {dataset.headers.map(h => <option key={h} value={h}>{h}</option>)}
-                          </select>
-                          {mapConfig.filterCol && (
-                             <select value={mapConfig.filterVal} onChange={(e) => setMapConfig({...mapConfig, filterVal: e.target.value})} className="w-full p-2 text-[13px] border border-indigo-200 rounded-lg bg-white outline-none focus:border-indigo-400 text-slate-700 font-medium">
-                                <option value="">-- Chọn giá trị lọc (VD: Đà Nẵng) --</option>
-                                {Array.from(new Set(dataset.rows.map(r => String(r[mapConfig.filterCol] || '').trim()).filter(Boolean))).sort().map(val => (
-                                   <option key={val} value={val}>{val}</option>
-                                ))}
-                             </select>
-                          )}
-                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-slate-500 uppercase mb-1.5">2. Biến Cần Phân Tích</label>
-                      <select value={mapConfig.analyzeVar} onChange={(e) => setMapConfig({...mapConfig, analyzeVar: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-[14px] font-medium bg-slate-50 outline-none focus:border-sky-400" disabled={mapConfig.aggMethod === 'count'}>
-                        <option value="">-- Bỏ qua --</option>
-                        {dataset.headers.filter(h => dataStats[h]?.type === 'numeric').map(h => <option key={h} value={h}>{h}</option>)}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-slate-500 uppercase mb-1.5">3. Phương Pháp Thống Kê</label>
-                      <select value={mapConfig.aggMethod} onChange={(e) => setMapConfig({...mapConfig, aggMethod: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-[14px] font-medium bg-slate-50 outline-none focus:border-sky-400">
-                        <option value="count">Đếm số lượng dòng (Count)</option><option value="sum">Cộng Tổng (Sum)</option><option value="mean">Trung Bình</option>
-                      </select>
-                      {mapConfig.aggMethod === 'count' && dataset.headers.some(h => dataStats[h]?.type === 'numeric') && (
-                         <p className="text-[11px] text-amber-600 mt-1.5 italic font-medium leading-tight">
-                            *Mẹo: Nếu file có sẵn cột số liệu, hãy đổi sang <b>Cộng Tổng</b> để bản đồ tính chính xác.
-                         </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-sky-600 uppercase mb-1.5 flex items-center gap-1"><Layers size={14}/> 4. Kiểu Bản Đồ</label>
-                      <select value={mapConfig.mapStyle} onChange={(e) => setMapConfig({...mapConfig, mapStyle: e.target.value})} className="w-full p-2.5 border-2 border-sky-200 rounded-lg text-[14px] font-bold bg-sky-50 text-sky-800 outline-none">
-                        <option value="polygon">Vùng địa giới (Polygon)</option><option value="heat">Điểm nhiệt (Heat Color)</option><option value="bubble">Bong bóng (Size)</option>
-                      </select>
-                    </div>
-
-                    {(mapConfig.mapStyle === 'polygon' || mapConfig.mapStyle === 'heat') && (
-                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200/60">
-                        <label className="block text-[12px] font-bold text-rose-600 uppercase mb-1.5 flex items-center gap-1"><Palette size={14}/> 5. Phân Mức Màu Sắc</label>
-                        <select value={mapConfig.colorMode} onChange={(e) => setMapConfig({...mapConfig, colorMode: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-[14px] font-medium bg-white outline-none focus:border-rose-400 mb-2">
-                          <option value="auto">Tự động (Dải màu Gradient)</option>
-                          <option value="3">Chia đều 3 mức độ</option>
-                          <option value="5">Chia đều 5 mức độ</option>
-                          <option value="7">Chia đều 7 mức độ</option>
-                          <option value="custom">Tùy chỉnh (Nhập bằng tay)</option>
-                        </select>
-                        
-                        {mapConfig.colorMode === 'custom' && (
-                           <div className="space-y-2 mt-3 border-t border-slate-200 pt-3">
-                             <div className="text-[11px] font-bold text-slate-500 uppercase">Khoảng giá trị (Từ - Đến) & Chọn Màu</div>
-                             {mapConfig.customRanges.map((range, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                   <input type="number" placeholder="Từ" value={range.min} onChange={e => {
-                                      const newR = [...mapConfig.customRanges]; newR[idx].min = Number(e.target.value);
-                                      setMapConfig({...mapConfig, customRanges: newR});
-                                   }} className="w-16 p-1.5 text-xs rounded border border-slate-300 outline-none" />
-                                   <span className="text-slate-400 font-bold">-</span>
-                                   <input type="number" placeholder="Đến" value={range.max} onChange={e => {
-                                      const newR = [...mapConfig.customRanges]; newR[idx].max = Number(e.target.value);
-                                      setMapConfig({...mapConfig, customRanges: newR});
-                                   }} className="w-16 p-1.5 text-xs rounded border border-slate-300 outline-none" />
-                                   <input type="color" value={range.color} onChange={e => {
-                                      const newR = [...mapConfig.customRanges]; newR[idx].color = e.target.value;
-                                      setMapConfig({...mapConfig, customRanges: newR});
-                                   }} className="w-8 h-8 rounded border border-slate-300 cursor-pointer p-0.5 bg-white" />
-                                   <button onClick={() => {
-                                      const newR = mapConfig.customRanges.filter((_, i) => i !== idx);
-                                      setMapConfig({...mapConfig, customRanges: newR});
-                                   }} className="text-red-400 hover:text-red-600 p-1"><Trash2 size={14}/></button>
-                                </div>
-                             ))}
-                             <button onClick={() => {
-                                setMapConfig({...mapConfig, customRanges: [...mapConfig.customRanges, {min: 0, max: 0, color: '#0ea5e9'}]});
-                             }} className="text-xs text-sky-600 font-bold flex items-center gap-1 mt-2 hover:text-sky-800 bg-sky-50 px-2 py-1 rounded border border-sky-100"><Plus size={12}/> Thêm mức mới</button>
-                           </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-[12px] font-bold text-slate-500 uppercase mb-1.5">6. Ngữ cảnh (Gợi ý cho AI)</label>
-                      <input type="text" placeholder="VD: Đà Nẵng, Việt Nam..." value={mapConfig.mapContext} onChange={(e) => setMapConfig({...mapConfig, mapContext: e.target.value})} className="w-full p-2.5 border border-slate-200 rounded-lg text-[14px] font-medium bg-slate-50 outline-none focus:border-sky-400" />
-                    </div>
-
-                    <button onClick={handleAnalyzeMapWithAI} disabled={isMapAnalyzing || !mapConfig.locationCol} className="w-full mt-2 h-[44px] bg-slate-800 text-white font-bold rounded-lg flex items-center justify-center gap-2 hover:bg-slate-900 disabled:opacity-50 shadow-md transition-colors">
-                      {isMapAnalyzing ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Sparkles size={18} />} Cập Nhật Bản Đồ
-                    </button>
                   </div>
-
-                  {mapAiInsight && (
-                    <div className="bg-white border border-indigo-100 rounded-2xl shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300">
-                      <div 
-                         className="flex items-center justify-between p-4 bg-indigo-50/50 cursor-pointer hover:bg-indigo-50 transition-colors"
-                         onClick={() => setIsAiInsightExpanded(!isAiInsightExpanded)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="text-indigo-600 w-5 h-5" />
-                          <h3 className="font-bold text-indigo-900 text-[14px] uppercase tracking-wide">Cảnh Báo Xu Hướng</h3>
-                        </div>
-                        {isAiInsightExpanded ? <ChevronUp size={18} className="text-indigo-400"/> : <ChevronDown size={18} className="text-indigo-400"/>}
-                      </div>
-                      {isAiInsightExpanded && (
-                         <div className="p-5 pt-2 border-t border-indigo-50">
-                           {renderMiniMarkdown(mapAiInsight)}
-                         </div>
-                      )}
-                    </div>
-                  )}
-
-                </div>
                 )}
               </div>
             </div>
@@ -2974,40 +2338,14 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
           {activeTab === 'analysis' && dataset.rows.length > 0 && renderAnalysis()}
           {activeTab === 'chat' && dataset.rows.length > 0 && renderAIChat()}
 
-          {isLoading && (
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-[100] flex flex-col items-center justify-center">
-              <div className="w-16 h-16 border-[5px] border-sky-100 border-t-sky-600 rounded-full animate-spin mb-5 shadow-lg"></div>
-              <p className="font-bold text-slate-600 text-lg">Đang xử lý...</p>
-            </div>
-          )}
+          {isLoading && <div className="absolute inset-0 bg-white/60 backdrop-blur-sm z-[100] flex flex-col items-center justify-center"><div className="w-12 h-12 border-4 border-sky-200 border-t-sky-600 rounded-full animate-spin mb-4"></div><p className="font-bold text-slate-700">Đang phân tích...</p></div>}
         </div>
       </main>
-      
-      {/* CSS MỞ RỘNG CHO TÊN XÃ/PHƯỜNG */}
       <style dangerouslySetInnerHTML={{__html: `
-        .leaflet-container { image-rendering: -webkit-optimize-contrast; background: #ffffff; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important; padding: 0; overflow: hidden; }
-        .leaflet-popup-content { margin: 12px 16px; line-height: 1.4; }
-        .leaflet-popup-tip { box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important; }
-        
-        /* Chữ đè lên bản đồ ko nền */
-        .leaflet-tooltip.custom-map-label-bg-transparent {
-            background-color: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-        .map-label-content {
-            font-size: 10px;
-            font-weight: 600;
-            color: #334155;
-            /* Đổ bóng chữ để dễ nhìn trên mọi nền màu */
-            text-shadow: 1px 1px 0 #ffffff, -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 0px 0px 3px rgba(255,255,255,0.7);
-            white-space: nowrap;
-        }
+        .map-label-content { font-size: 10px; font-weight: 700; color: #334; text-shadow: 1px 1px #fff; }
+        @media print { .z-20, header, .flex-wrap, button { display: none !important; } main { width: 100% !important; } }
       `}} />
     </div>
   );
