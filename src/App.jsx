@@ -671,6 +671,10 @@ export default function App() {
   const [schemaExplanation, setSchemaExplanation] = useState('');
   const [anomaliesInsight, setAnomaliesInsight] = useState('');
 
+  // Trạng thái Báo cáo tổng hợp AI
+  const [aiReportContent, setAiReportContent] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
   // Trạng thái Logo Tùy chỉnh
   const [customLogo, setCustomLogo] = useState(null);
 
@@ -1268,6 +1272,8 @@ An Hải Tây,2023-02-09,DuongTinh`;
     setSchemaExplanation('');
     setAnomaliesInsight('');
     
+    setAiReportContent(''); // Reset nội dung báo cáo AI
+    
     setAdvancedTest('');
     setTestVar1('');
     setTestVar2('');
@@ -1305,9 +1311,115 @@ An Hải Tây,2023-02-09,DuongTinh`;
   const renderMiniMarkdown = (text) => text?.split('\n').map((line, i) => {
     if (line.startsWith('### ')) return <h4 key={i} className="font-bold text-slate-800 mt-4 mb-2 text-lg">{line.replace('### ', '')}</h4>;
     if (line.startsWith('## ')) return <h3 key={i} className="font-bold text-slate-900 mt-5 mb-3 text-xl">{line.replace('## ', '')}</h3>;
+    if (line.startsWith('# ')) return <h2 key={i} className="font-bold text-slate-900 mt-6 mb-4 text-2xl border-b border-slate-200 pb-2">{line.replace('# ', '')}</h2>;
     const parts = line.split(/(\*\*.*?\*\*)/g);
     return <p key={i} className="text-slate-600 text-[15px] my-1.5 leading-relaxed">{parts.map((part, j) => part.startsWith('**') && part.endsWith('**') ? <strong key={j} className="text-slate-800">{part.replace(/\*\*/g, '')}</strong> : part)}</p>;
   });
+
+  // --- MODULE BÁO CÁO TỔNG HỢP AI ---
+  const renderAIReportView = () => {
+    const handleGenerateReport = async () => {
+      setIsGeneratingReport(true);
+      
+      // Lọc và tóm tắt dataStats để không bị vượt quá giới hạn token của AI
+      const statsSummary = {};
+      for (const [key, stat] of Object.entries(dataStats)) {
+         if (stat.type === 'numeric') {
+             statsSummary[key] = { min: stat.min, max: stat.max, mean: stat.mean, count: stat.count };
+         } else {
+             statsSummary[key] = { count: stat.count, unique: stat.unique, top_values: stat.frequencies.slice(0, 5) };
+         }
+      }
+
+      const prompt = `Bạn là một Chuyên gia Dịch tễ học và Thống kê y tế cấp cao của Trung tâm Kiểm soát Bệnh tật (CDC).
+Hãy phân tích bộ dữ liệu sau (gồm ${dataset.rows.length} bản ghi, ${dataset.headers.length} biến số).
+Tóm tắt thống kê chi tiết của tập dữ liệu: ${JSON.stringify(statsSummary)}
+
+Hãy viết một BÁO CÁO TỔNG HỢP chuyên sâu (sử dụng định dạng Markdown) theo đúng cấu trúc sau. Trình bày bằng ngôn ngữ khoa học, sắc bén và dễ hiểu cho nhà quản lý:
+## 1. Đánh giá tổng quan dữ liệu
+## 2. Phân tích đa chiều (Mối liên hệ tiềm năng giữa các biến)
+## 3. Dự báo & Xu hướng diễn biến dịch
+## 4. Cảnh báo rủi ro & Điểm nóng
+## 5. Đề xuất can thiệp cho đơn vị CDC`;
+
+      const response = await callGeminiAPI(prompt, "Bạn là Chuyên gia Dịch tễ học CDC. Viết báo cáo khoa học, chính xác, sử dụng định dạng Markdown.");
+      setAiReportContent(response);
+      setIsGeneratingReport(false);
+    };
+
+    const handlePrintReport = () => {
+      window.print();
+    };
+
+    return (
+      <div className="p-8 h-full flex flex-col bg-slate-50 overflow-y-auto custom-scrollbar">
+        <div className="flex justify-between items-center mb-6 no-print shrink-0">
+          <div>
+            <h2 className="text-[26px] font-extrabold text-slate-800 flex items-center gap-2.5">
+              <FileText className="text-sky-600" size={28} /> Báo Cáo Tổng Hợp AI
+            </h2>
+            <p className="text-slate-500 text-[15px] mt-1.5">Trí tuệ nhân tạo đóng vai trò chuyên gia dịch tễ, tự động phân tích và đưa ra đề xuất.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <button onClick={handleGenerateReport} disabled={isGeneratingReport} className="px-5 py-2.5 bg-sky-600 text-white font-medium rounded-xl flex items-center gap-2 hover:bg-sky-700 shadow-sm transition-colors disabled:opacity-50">
+               {isGeneratingReport ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <BrainCircuit size={20} />} 
+               {isGeneratingReport ? 'Đang phân tích...' : 'Khởi Tạo Báo Cáo'}
+             </button>
+             {aiReportContent && (
+               <button onClick={handlePrintReport} className="px-5 py-2.5 bg-slate-800 text-white font-medium rounded-xl flex items-center gap-2 hover:bg-slate-900 shadow-sm transition-colors">
+                 <Printer size={20} /> In / Xuất PDF
+               </button>
+             )}
+          </div>
+        </div>
+
+        {!aiReportContent && !isGeneratingReport && (
+           <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-3xl bg-white/40 m-4 py-24 no-print">
+             <div className="bg-sky-50 p-6 rounded-full mb-5 shadow-inner">
+               <FileText size={56} className="text-sky-400" />
+             </div>
+             <h3 className="text-xl font-bold text-slate-700 mb-2">Chưa có báo cáo nào được tạo</h3>
+             <p className="text-[15px] text-slate-500 mb-6">Nhấn "Khởi Tạo Báo Cáo" để AI bắt đầu phân tích toàn bộ tập dữ liệu.</p>
+           </div>
+        )}
+
+        {isGeneratingReport && (
+           <div className="flex-1 flex flex-col items-center justify-center m-4 py-24 no-print shrink-0">
+              <div className="w-16 h-16 border-[5px] border-sky-100 border-t-sky-600 rounded-full animate-spin mb-5 shadow-lg"></div>
+              <h3 className="text-lg font-bold text-slate-700 mb-2">Hệ thống đang đọc và tư duy phân tích...</h3>
+              <p className="text-slate-500">Quá trình này có thể mất từ 10 - 20 giây tùy độ lớn của dữ liệu.</p>
+           </div>
+        )}
+
+        {aiReportContent && !isGeneratingReport && (
+           <div id="printable-report" className="bg-white rounded-2xl border border-slate-200 shadow-md p-10 relative shrink-0 mb-8">
+              {/* Header cho bản in */}
+              <div className="hidden print:block text-center border-b-2 border-slate-800 pb-6 mb-8">
+                 <h1 className="text-2xl font-extrabold text-slate-900 uppercase">Trung Tâm Kiểm Soát Bệnh Tật (CDC)</h1>
+                 <h2 className="text-xl font-bold text-slate-700 mt-2">Báo Cáo Giám Sát Và Đánh Giá Dịch Tễ Phân Tích Bằng AI</h2>
+                 <p className="text-slate-500 mt-2 italic">Ngày trích xuất báo cáo: {new Date().toLocaleDateString('vi-VN')} - Tệp nguồn: {dataset.rows.length} bản ghi</p>
+              </div>
+
+              <div className="absolute top-0 right-0 p-4 bg-sky-50 text-sky-800 font-bold rounded-bl-2xl text-[12px] uppercase tracking-wide border-b border-l border-sky-100 no-print flex items-center gap-2">
+                 <CheckCircle size={14}/> AI Generated Report
+              </div>
+              
+              <div className="text-slate-800 max-w-4xl mx-auto print:max-w-none">
+                 {renderMiniMarkdown(aiReportContent)}
+              </div>
+              
+              {/* Chữ ký cho bản in */}
+              <div className="hidden print:flex justify-end mt-16 pr-12">
+                 <div className="text-center">
+                    <p className="font-bold text-slate-800">HỆ THỐNG PHÂN TÍCH AI (Ký thay)</p>
+                    <p className="text-slate-500 italic mt-1">(Tài liệu tạo tự động dựa trên dữ liệu đầu vào)</p>
+                 </div>
+              </div>
+           </div>
+        )}
+      </div>
+    );
+  };
 
   const renderDashboardView = () => {
     const handleAddWidget = () => {
@@ -2020,8 +2132,8 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                </div>
                
                <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có mối liên hệ mang ý nghĩa thống kê giữa "${testVar1}" và "${testVar2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có mối liên hệ giữa "${testVar1}" và "${testVar2}" (p >= 0.05).`}
+                 <strong>Kết luận: </strong>
+                 {isSig ? `Có mối liên hệ mang ý nghĩa thống kê giữa "${testVar1}" và "${testVar2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có mối liên hệ giữa "${testVar1}" và "${testVar2}" (p >= 0.05).`}
                </div>
                
                {expectedWarning && (
@@ -2086,8 +2198,8 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                </div>
 
                <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có sự khác biệt mang ý nghĩa thống kê về trung bình của biến "${testVar1}" giữa 2 nhóm "${group1}" và "${group2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt về trung bình của biến "${testVar1}" giữa 2 nhóm "${group1}" và "${group2}" (p >= 0.05).`}
+                 <strong>Kết luận: </strong>
+                 {isSig ? `Có sự khác biệt mang ý nghĩa thống kê về trung bình của biến "${testVar1}" giữa 2 nhóm "${group1}" và "${group2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt về trung bình của biến "${testVar1}" giữa 2 nhóm "${group1}" và "${group2}" (p >= 0.05).`}
                </div>
             </div>
          );
@@ -2139,8 +2251,8 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                </div>
 
                <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có sự khác biệt mang ý nghĩa thống kê giữa "${testVar1}" và "${testVar2}" trên cùng đối tượng quan sát (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt giữa "${testVar1}" và "${testVar2}" (p >= 0.05).`}
+                 <strong>Kết luận: </strong>
+                 {isSig ? `Có sự khác biệt mang ý nghĩa thống kê giữa "${testVar1}" và "${testVar2}" trên cùng đối tượng quan sát (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt giữa "${testVar1}" và "${testVar2}" (p >= 0.05).`}
                </div>
             </div>
          );
@@ -2209,8 +2321,8 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                </div>
 
                <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có sự khác biệt mang ý nghĩa thống kê về trung bình của biến "${testVar1}" giữa các nhóm "${testVar2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt về trung bình của biến "${testVar1}" giữa các nhóm "${testVar2}" (p >= 0.05).`}
+                 <strong>Kết luận: </strong>
+                 {isSig ? `Có sự khác biệt mang ý nghĩa thống kê về trung bình của biến "${testVar1}" giữa các nhóm "${testVar2}" (p < 0.05).` : `Chưa đủ bằng chứng để kết luận có sự khác biệt về trung bình của biến "${testVar1}" giữa các nhóm "${testVar2}" (p >= 0.05).`}
                </div>
             </div>
          );
@@ -2289,8 +2401,8 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
                </div>
 
                <div className={`p-4 rounded-lg border ${isSig ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-slate-100 border-slate-300 text-slate-700'}`}>
-                  <strong>Kết luận: </strong>
-                  {isSig ? `Có bằng chứng thống kê cho thấy sự thay đổi của "${xVar}" có thể dùng để giải thích (dự đoán) sự thay đổi của "${yVar}" (p < 0.05). Mô hình giải thích được ${(rSquared * 100).toFixed(1)}% sự biến thiên.` : `Chưa đủ bằng chứng để kết luận "${xVar}" có khả năng dự đoán tuyến tính "${yVar}" (p >= 0.05).`}
+                 <strong>Kết luận: </strong>
+                 {isSig ? `Có bằng chứng thống kê cho thấy sự thay đổi của "${xVar}" có thể dùng để giải thích (dự đoán) sự thay đổi của "${yVar}" (p < 0.05). Mô hình giải thích được ${(rSquared * 100).toFixed(1)}% sự biến thiên.` : `Chưa đủ bằng chứng để kết luận "${xVar}" có khả năng dự đoán tuyến tính "${yVar}" (p >= 0.05).`}
                </div>
             </div>
          );
@@ -2716,6 +2828,7 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
         { id: 'data', icon: <Table2 size={20}/>, label: 'Bảng Dữ Liệu' },
         { id: 'analysis', icon: <TrendingUp size={20}/>, label: 'Phân Tích Thống Kê' },
         { id: 'map', icon: <MapIcon size={20}/>, label: 'Bản Đồ Dịch Tễ (GIS)' },
+        { id: 'ai_report', icon: <FileText size={20}/>, label: 'Báo Cáo Tổng Hợp AI' },
         { id: 'chat', icon: <MessageSquare size={20}/>, label: 'Hỏi Đáp AI' },
       ].map(item => (
         <button key={item.id} onClick={() => setActiveTab(item.id)} className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-xl transition-all font-semibold text-[15px] ${activeTab === item.id ? 'bg-sky-600 text-white shadow-lg shadow-sky-900/50' : 'hover:bg-slate-800 hover:text-white text-slate-400'}`}>
@@ -2972,6 +3085,7 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
           {activeTab === 'dashboard' && dataset.rows.length > 0 && renderDashboardView()}
           {activeTab === 'data' && dataset.rows.length > 0 && renderDataView()}
           {activeTab === 'analysis' && dataset.rows.length > 0 && renderAnalysis()}
+          {activeTab === 'ai_report' && dataset.rows.length > 0 && renderAIReportView()}
           {activeTab === 'chat' && dataset.rows.length > 0 && renderAIChat()}
 
           {isLoading && (
@@ -3007,6 +3121,23 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
             /* Đổ bóng chữ để dễ nhìn trên mọi nền màu */
             text-shadow: 1px 1px 0 #ffffff, -1px -1px 0 #ffffff, 1px -1px 0 #ffffff, -1px 1px 0 #ffffff, 0px 0px 3px rgba(255,255,255,0.7);
             white-space: nowrap;
+        }
+
+        /* Tùy chỉnh Layout Bản in (Print CSS) */
+        @media print {
+            body * { visibility: hidden; }
+            #printable-report, #printable-report * { visibility: visible; }
+            #printable-report { 
+                position: absolute; 
+                left: 0; 
+                top: 0; 
+                width: 100%; 
+                margin: 0; 
+                padding: 0; 
+                box-shadow: none; 
+                border: none; 
+            }
+            .no-print { display: none !important; }
         }
       `}} />
     </div>
