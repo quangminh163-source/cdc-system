@@ -624,7 +624,14 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
 }
 
 // --- API GEMINI TÍCH HỢP ---
-const apiKey = ""; 
+let envKey = "";
+try {
+  if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_GEMINI_API_KEY) {
+    envKey = process.env.REACT_APP_GEMINI_API_KEY;
+  }
+} catch (e) {}
+
+const apiKey = envKey || ""; // <-- DÁN API KEY CỦA BẠN VÀO TRONG DẤU NGOẶC KÉP NÀY TRƯỚC KHI ĐƯA LÊN VERCEL
 
 const callGeminiAPI = async (prompt, systemInstruction) => {
   try {
@@ -677,6 +684,9 @@ export default function App() {
 
   // Trạng thái Logo Tùy chỉnh
   const [customLogo, setCustomLogo] = useState(null);
+
+  // Trạng thái cho Reset Modal
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -1264,7 +1274,7 @@ An Hải Tây,2023-02-09,DuongTinh`;
 
   // --- THÊM HÀM RESET TOÀN BỘ HỆ THỐNG ---
   const handleResetAllData = () => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa toàn bộ dữ liệu, biểu đồ, bản đồ và kết quả phân tích hiện tại để bắt đầu lại từ đầu?")) return;
+    // Đã thay window.confirm bằng Modal UI Custom
     
     setDataset({ headers: [], rows: [] });
     setDataStats({});
@@ -1343,7 +1353,13 @@ Hãy viết một BÁO CÁO TỔNG HỢP chuyên sâu (sử dụng định dạn
 ## 5. Đề xuất can thiệp cho đơn vị CDC`;
 
       const response = await callGeminiAPI(prompt, "Bạn là Chuyên gia Dịch tễ học CDC. Viết báo cáo khoa học, chính xác, sử dụng định dạng Markdown.");
-      setAiReportContent(response);
+      
+      // SỬA ĐỔI: Thêm cảnh báo nếu không gọi được AI
+      if (response && response !== "Không có phản hồi từ AI.") {
+        setAiReportContent(response);
+      } else {
+        alert("⚠️ Không thể kết nối với AI.\nNguyên nhân: Bạn chưa cấu hình API Key trên Vercel hoặc Key bị sai.\nVui lòng vào Dashboard Vercel -> Settings -> Environment Variables để thêm VITE_GEMINI_API_KEY.");
+      }
       setIsGeneratingReport(false);
     };
 
@@ -2846,7 +2862,7 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
           </div>
           <div className="flex items-center gap-4">
             {dataset.rows.length > 0 && (
-                <button onClick={handleResetAllData} className="flex items-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full text-[13px] font-bold transition-colors border border-rose-100 shadow-sm">
+                <button onClick={() => setIsResetModalOpen(true)} className="flex items-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-full text-[13px] font-bold transition-colors border border-rose-100 shadow-sm">
                     <RefreshCw size={14} /> Reset Toàn Bộ Hệ Thống
                 </button>
             )}
@@ -2873,7 +2889,7 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
               {dataset.rows.length > 0 && (
                  <div className="mt-8 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4">
                      <div className="text-slate-400 font-medium mb-3">Hoặc</div>
-                     <button onClick={handleResetAllData} className="px-6 py-3 bg-rose-100 text-rose-700 font-bold rounded-xl hover:bg-rose-200 shadow-sm flex items-center gap-2 transition-colors">
+                     <button onClick={() => setIsResetModalOpen(true)} className="px-6 py-3 bg-rose-100 text-rose-700 font-bold rounded-xl hover:bg-rose-200 shadow-sm flex items-center gap-2 transition-colors">
                          <RefreshCw size={18} /> Xóa Dữ Liệu Cũ & Khởi Động Lại
                      </button>
                  </div>
@@ -3096,6 +3112,31 @@ Trả về JSON: {"type": "bar/line/area/pie/doughnut/funnel/table", "xAxes": ["
           )}
         </div>
       </main>
+
+      {/* MODAL XÁC NHẬN RESET */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 animate-in fade-in zoom-in duration-200 mx-4">
+            <div className="flex items-start gap-4 mb-5">
+              <div className="w-12 h-12 bg-rose-100 rounded-full flex items-center justify-center shrink-0 mt-1">
+                <AlertTriangle className="text-rose-600 w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-slate-800">Xác nhận thiết lập lại</h3>
+                <p className="text-[15px] text-slate-500 mt-2 leading-relaxed">Bạn có chắc chắn muốn xóa toàn bộ dữ liệu, biểu đồ, bản đồ và kết quả phân tích hiện tại để bắt đầu lại từ đầu?</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 mt-2">
+              <button onClick={() => setIsResetModalOpen(false)} className="px-5 py-2.5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                Hủy bỏ
+              </button>
+              <button onClick={() => { handleResetAllData(); setIsResetModalOpen(false); }} className="px-5 py-2.5 rounded-xl font-bold bg-rose-600 text-white hover:bg-rose-700 shadow-sm transition-colors">
+                Đồng ý, Xóa tất cả
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* CSS MỞ RỘNG CHO TÊN XÃ/PHƯỜNG */}
       <style dangerouslySetInnerHTML={{__html: `
