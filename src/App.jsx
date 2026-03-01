@@ -624,6 +624,11 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
 }
 
 // --- API GEMINI TÍCH HỢP ---
+
+// 👇👇👇 QUAN TRỌNG: BẠN CẦN DÁN API KEY VÀO DÒNG DƯỚI ĐÂY 👇👇👇
+const MY_API_KEY = "AIzaSyAxjGM4yXBmwd2AWomOld63RMx3oq3xGXA"; // <--- XÓA DẤU NGOẶC KÉP RỖNG, DÁN KEY CỦA BẠN VÀO ĐÂY. VÍ DỤ: "AIzaSy..."
+// 👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆
+
 let envKey = "";
 try {
   if (typeof process !== 'undefined' && process.env && process.env.REACT_APP_GEMINI_API_KEY) {
@@ -631,7 +636,8 @@ try {
   }
 } catch (e) {}
 
-const apiKey = envKey || ""; // <-- DÁN API KEY CỦA BẠN VÀO TRONG DẤU NGOẶC KÉP NÀY TRƯỚC KHI ĐƯA LÊN VERCEL
+// Hệ thống sẽ ưu tiên lấy Key bạn dán trực tiếp (MY_API_KEY)
+const apiKey = MY_API_KEY || envKey || ""; 
 
 const callGeminiAPI = async (prompt, systemInstruction) => {
   try {
