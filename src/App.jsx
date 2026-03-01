@@ -626,7 +626,7 @@ const DashboardWidget = ({ widget, dataset, onRemove }) => {
 // --- API GEMINI TÍCH HỢP ---
 
 // 👇👇👇 QUAN TRỌNG: BẠN CẦN DÁN API KEY VÀO DÒNG DƯỚI ĐÂY 👇👇👇
-const MY_API_KEY = "AIzaSyAxjGM4yXBmwd2AWomOld63RMx3oq3xGXA"; // <--- XÓA DẤU NGOẶC KÉP RỖNG, DÁN KEY CỦA BẠN VÀO ĐÂY. VÍ DỤ: "AIzaSy..."
+const MY_API_KEY = "AIzaSyBv-wTnrKYP5G7GuQARa2IXxcXxPQqZ-fg"; // <--- XÓA DẤU NGOẶC KÉP RỖNG, DÁN KEY CỦA BẠN VÀO ĐÂY. VÍ DỤ: "AIzaSy..."
 // 👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆👆
 
 let envKey = "";
